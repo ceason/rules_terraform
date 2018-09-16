@@ -48,14 +48,11 @@ _bazel(){
 	esac
 }
 
-for t in "${PREPUBLISH_BUILDS[@]}"; do
-	>&2 echo "Building $t"
-    _bazel build $t
-done
-for t in "${PREPUBLISH_TESTS[@]}"; do
-	>&2 echo "Testing $t"
-    _bazel test $t
-done
+>&2 echo "Building: $(printf "\n  %s" "${PREPUBLISH_BUILDS[@]}")"
+_bazel build -- "${PREPUBLISH_BUILDS[@]}"
+
+>&2 echo "Testing: $(printf "\n  %s" "${PREPUBLISH_TESTS[@]}")"
+_bazel test -- "${PREPUBLISH_TESTS[@]}"
 
 # create all of the releasefiles update scripts (without running them),
 # then run them in parallel
