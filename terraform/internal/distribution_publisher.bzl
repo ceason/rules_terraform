@@ -27,8 +27,8 @@ def _impl(ctx):
         template = ctx.file._template,
         substitutions = {
             "%{env_vars}": " ".join(env_vars),
-            "%{prepublish_tests}": " ".join(ctx.attr.prepublish_tests),
-            "%{prepublish_builds}": " ".join(ctx.attr.prepublish_builds),
+            "%{prepublish_tests}": " ".join(["'%s'" % t for t in ctx.attr.prepublish_tests or []]),
+            "%{prepublish_builds}": " ".join(["'%s'" % t for t in ctx.attr.prepublish_builds or []]),
             "%{distrib_dir_targets}": " ".join(distrib_dir_targets),
         },
         output = ctx.outputs.executable,
@@ -57,14 +57,14 @@ terraform_distribution_publisher = rule(
         ),
         "prepublish_builds": attr.string_list(
             doc = "Ensure these target patterns build prior to publishing (eg make sure '//...' builds)",
-            default = [],
+            default = ["//..."],
         ),
         "prepublish_tests": attr.string_list(
             doc = "Ensure these tests pass prior to publishing (eg '//...', plus explicitly enumerating select tests tagged as 'manual')",
-            default = [],
+            default = ["//..."],
         ),
         "env": attr.string_dict(
-            doc = "",
+            doc = "Environment variables set when publishing (useful in conjunction with '--workspace_status_command' script)",
             default = {},
         ),
     },

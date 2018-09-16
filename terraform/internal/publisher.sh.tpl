@@ -48,15 +48,18 @@ _bazel(){
 	esac
 }
 
->&2 echo "Building: $(printf "\n  %s" "${PREPUBLISH_BUILDS[@]}")"
-_bazel build -- "${PREPUBLISH_BUILDS[@]}"
+if [ ${#PREPUBLISH_BUILDS[@]} -gt 0 ]; then
+	>&2 echo "Building: $(printf "\n  %s" "${PREPUBLISH_BUILDS[@]}")"
+	_bazel build -- "${PREPUBLISH_BUILDS[@]}"
+fi
 
->&2 echo "Testing: $(printf "\n  %s" "${PREPUBLISH_TESTS[@]}")"
-_bazel test -- "${PREPUBLISH_TESTS[@]}"
+if [ ${#PREPUBLISH_TESTS[@]} -gt 0 ]; then
+	>&2 echo "Testing: $(printf "\n  %s" "${PREPUBLISH_TESTS[@]}")"
+	_bazel test -- "${PREPUBLISH_TESTS[@]}"
+fi
 
 # create all of the releasefiles update scripts (without running them),
 # then run them in parallel
-
 distdir_scripts=()
 trap 'for f in ${distdir_scripts[@]}; do rm -rf $f; done' EXIT
 for t in "${DISTRIB_DIR_TARGETS[@]}"; do
