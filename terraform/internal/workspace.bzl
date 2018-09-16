@@ -18,6 +18,7 @@ def _impl(ctx):
 
     for dep in ctx.attr.deps:
         transitive_runfiles.append(dep.default_runfiles.files)
+
         # we assume this is a '_k8s_object'...
         l = dep.label
         k8s_executable = "%s/%s" % (l.package, l.name)
@@ -89,10 +90,8 @@ def _impl(ctx):
                       """.format(
         package = ctx.label.package,
         argsfile = renderer_argsfile.short_path,
-        render_tf = ctx.executable._render_tf.short_path
+        render_tf = ctx.executable._render_tf.short_path,
     ))
-
-
 
     return [DefaultInfo(
         runfiles = ctx.runfiles(
@@ -127,3 +126,23 @@ terraform_workspace = rule(
         ),
     },
 )
+
+def terraform_workspace_macro(name, **kwargs):
+    terraform_workspace(
+        name = name,
+        **kwargs
+    )
+
+    # create a convenient destroy target which
+    # CDs to the package dir and runs terraform destroy
+    native.genrule(
+        name = "%s.destroy" % name,
+        outs = ["%s.destroy.sh"],
+        cmd = """
+            echo '#!/bin/sh
+cd $$BUILD_WORKSPACE_DIRECTORY/{package}
+exec terraform destroy "$$@"
+' > $@
+        """.format(package = native.package_name()),
+        executable = True,
+    )
