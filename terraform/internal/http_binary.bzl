@@ -48,6 +48,7 @@ sh_binary(
     name = "binary",
     srcs = ["@{repository_name}//archive:{path}"],
     data = ["@{repository_name}//archive"],
+    visibility = ["//visibility:public"],
 )
 alias(
     name = "{repository_name}",
@@ -99,6 +100,7 @@ def _http_file_binary_impl(ctx):
 sh_binary(
     name = "binary",
     srcs = ["{filename}"],
+    visibility = ["//visibility:public"],
 )
 alias(
     name = "{repository_name}",

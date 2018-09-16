@@ -4,7 +4,6 @@ load(":util.bzl", "merge_filemap_dict")
 def _impl(ctx):
     """
     """
-    k8s_objects = []
     runfiles = []
     transitive_runfiles = []
     transitive_plugins = []
@@ -17,6 +16,13 @@ def _impl(ctx):
         renderer_args.extend(["--file", path, f.short_path])
         runfiles.append(f)
 
+    for dep in ctx.attr.deps:
+        transitive_runfiles.append(dep.default_runfiles.files)
+        # we assume this is a '_k8s_object'...
+        l = dep.label
+        k8s_executable = "%s/%s" % (l.package, l.name)
+        renderer_args.extend(["--k8s_object", ".", k8s_executable])
+
     for m, name in ctx.attr.modules.items():
         module = m[ModuleInfo]
         transitive_runfiles.append(m.default_runfiles.files)
@@ -25,7 +31,6 @@ def _impl(ctx):
             runfiles.append(file)
 
         for o in module.k8s_objects.to_list():
-            k8s_objects.append(struct(module = name, resolver = o))
             renderer_args.extend(["--k8s_object", name, o])
 
         if module.plugins:
@@ -103,6 +108,12 @@ terraform_workspace = rule(
     executable = True,
     attrs = {
         "srcs": attr.label_list(allow_files = True),
+        "deps": attr.label_list(
+            # todo: make this consistent with 'terraform_module' deps attribute
+            allow_rules = [
+                "_k8s_object",
+            ],
+        ),
         "modules": attr.label_keyed_string_dict(
             providers = [ModuleInfo],
         ),
