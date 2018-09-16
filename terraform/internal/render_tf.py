@@ -90,7 +90,7 @@ def main(args):
 			# strip 'namespace' if it's present
 			k8s_object['metadata'].pop('namespace', None)
 			content = yaml.dump(k8s_object, default_flow_style=False)
-			filename = "{name}-{kind}.k8s.yaml".format(
+			filename = "{name}-{kind}.yaml".format(
 				name=k8s_object['metadata']['name'],
 				kind=k8s_object['kind'].lower(),
 			)
