@@ -8,6 +8,7 @@ terraform_distribution_publisher(
     prepublish_builds = ["//..."],
     prepublish_tests = [
         "//...",
+        "//examples/test:e2e_integration_test",
     ],
     deps = [
         ":mymodule",
