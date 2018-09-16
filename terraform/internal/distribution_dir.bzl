@@ -1,4 +1,4 @@
-load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo")
+load("//terraform:providers.bzl", "DistributionDirInfo", "ModuleInfo", "PluginInfo")
 load(":module.bzl", "terraform_module")
 load(":util.bzl", "merge_filemap_dict")
 
@@ -50,13 +50,14 @@ def _impl(ctx):
         output = ctx.outputs.executable,
     )
 
-
     return [DefaultInfo(
         runfiles = ctx.runfiles(
             files = runfiles,
             transitive_files = depset(transitive = transitive_runfiles),
+            collect_data = True,
+            collect_default = True,
         ),
-    )]
+    ), DistributionDirInfo()]
 
 terraform_distribution_dir = rule(
     implementation = _impl,

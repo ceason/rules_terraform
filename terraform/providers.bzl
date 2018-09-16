@@ -13,3 +13,5 @@ ModuleInfo = provider(
 )
 
 WorkspaceInfo = provider()
+
+DistributionDirInfo = provider()

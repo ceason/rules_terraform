@@ -11,6 +11,7 @@ def _impl(ctx):
     transitive_k8s_objects = []
     runfiles = []
     transitive_runfiles = []
+    plugins = [p for p in ctx.attr.plugins]
     transitive_plugins = []
     for f in ctx.files.srcs:
         label = f.owner or ctx.label
@@ -33,10 +34,14 @@ def _impl(ctx):
             k8s_executable = "%s/%s" % (l.package, l.name)
             k8s_objects.append(k8s_executable)
 
+    # add default kubectl plugin if no plugins are specified
+    if k8s_objects and not ctx.attr.plugins:
+        plugins.append(ctx.attr._default_kubectl_plugin)
+
     return [
         ModuleInfo(
             files = files,
-            plugins = depset(direct = ctx.attr.plugins, transitive = transitive_plugins),
+            plugins = depset(direct = plugins, transitive = transitive_plugins),
             k8s_objects = depset(direct = k8s_objects, transitive = transitive_k8s_objects),
         ),
         DefaultInfo(
@@ -61,6 +66,10 @@ terraform_module = rule(
         ),
         "plugins": attr.label_list(
             providers = [PluginInfo],
+        ),
+        "_default_kubectl_plugin": attr.label(
+            providers = [PluginInfo],
+            default = "//terraform/plugins/kubectl",
         ),
     },
 )

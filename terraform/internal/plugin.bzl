@@ -5,9 +5,7 @@ def _impl(ctx):
     """
     file_map = {}
     for f in ctx.files.srcs:
-        label = f.owner or ctx.label
-        prefix = label.package + "/"
-        plugin_path = f.short_path[len(prefix):]
+        plugin_path = "/".join(f.path.split("/")[-2:])
         file_map[plugin_path] = f
     return [PluginInfo(files = file_map)]
 

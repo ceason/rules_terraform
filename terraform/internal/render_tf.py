@@ -11,15 +11,15 @@ parser = argparse.ArgumentParser(
 	description='Render a Terraform workspace & associated plugins dir')
 
 parser.add_argument(
-	'--k8s_object', action='append', metavar=('output_prefix', 'resolver'), nargs=2,
+	'--k8s_object', action='append', metavar=('output_prefix', 'resolver'), nargs=2, default=[],
 	help='File that when executed, outputs a yaml stream of k8s objects')
 
 parser.add_argument(
-	'--file', action='append', metavar=('tgt_path', 'src'), nargs=2,
+	'--file', action='append', metavar=('tgt_path', 'src'), nargs=2, default=[],
 	help="'src' file will be copied to 'tgt_path', relative to 'output_dir'")
 
 parser.add_argument(
-	'--plugin_file', action='append', metavar=('tgt_path', 'src'), nargs=2,
+	'--plugin_file', action='append', metavar=('tgt_path', 'src'), nargs=2, default=[],
 	help="'src' file will be copied to 'tgt_path', relative to 'plugin_dir'")
 
 parser.add_argument(
@@ -68,15 +68,13 @@ def put_file(output_path, src=None, content=None, overwrite=False):
 
 
 def main(args):
-	for pair in args.file:
-		tgt, src = pair
+	for tgt, src in args.file:
 		tgt_abs = args.output_dir + "/" + tgt
 		put_file(tgt_abs, src)
 
 	# only write plugin files if the plugin_dir was specified
 	if args.plugin_dir:
-		for pair in args.plugin_file:
-			tgt, src = pair
+		for tgt, src in args.plugin_file:
 			tgt_abs = args.plugin_dir + "/" + tgt
 			put_file(tgt_abs, src, overwrite=True)
 
