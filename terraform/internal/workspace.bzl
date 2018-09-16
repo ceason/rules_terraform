@@ -45,12 +45,8 @@ def _impl(ctx):
     ctx.actions.write(ctx.outputs.executable, """
                       #!/bin/bash
                       set -eu
-
-                      tfroot="$BUILD_WORKSPACE_DIRECTORY/{package}/.terraform/tfroot"
-                      plugin_dir="$BUILD_WORKSPACE_DIRECTORY/{package}/.terraform/plugins"
-                      # 'rules_k8s' needs to have PYTHON_RUNFILES set
                       export PYTHON_RUNFILES=${{PYTHON_RUNFILES:=$0.runfiles}}
-                      export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+                      export TF_PLUGIN_CACHE_DIR="${{TF_PLUGIN_CACHE_DIR:=$HOME/.terraform.d/plugin-cache}}"
                       mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
                       # figure out which command we are running
@@ -59,10 +55,15 @@ def _impl(ctx):
                         command=$1; shift
                       fi
 
+                      if [ "$command" = "render" ]; then
+                        exec {render_tf} '@{argsfile}' "$@"
+                      fi
+
+                      tfroot="$BUILD_WORKSPACE_DIRECTORY/{package}/.terraform/tfroot"
+                      plugin_dir="$BUILD_WORKSPACE_DIRECTORY/{package}/.terraform/plugins"
+                      # 'rules_k8s' needs to have PYTHON_RUNFILES set
+
                       case "$command" in
-                      render)
-                        {render_tf} '@{argsfile}' "$@"
-                        ;;
                       apply)
                         # rm -rf "$plugin_dir" # potentially can't remove this else 'destroy' won't work if a provider is removed??
                         rm -rf "$tfroot"

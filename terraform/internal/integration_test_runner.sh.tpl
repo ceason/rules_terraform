@@ -24,8 +24,14 @@ trap cleanup EXIT
 render_tf="%{render_tf}"
 SRCTEST="%{srctest}"
 
-export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+: ${TMPDIR:=/tmp}
+: ${TF_PLUGIN_CACHE_DIR:=$TMPDIR/terraform-plugin-cache}
+export TF_PLUGIN_CACHE_DIR
 mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+# guess the kubeconfig location if it isn't already set
+: ${KUBECONFIG:="/Users/$USER/.kube/config:/home/$USER/.kube/config"}
+export KUBECONFIG
 
 # render the tf to a tempdir
 tfroot=$TEST_TMPDIR/tf/tfroot
