@@ -8,18 +8,20 @@ def _impl(ctx):
     transitive_runfiles = []
 
     transitive_runfiles.append(ctx.attr._runner_template.data_runfiles.files)
+    transitive_runfiles.append(ctx.attr._stern.data_runfiles.files)
     transitive_runfiles.append(ctx.attr.srctest.data_runfiles.files)
     transitive_runfiles.append(ctx.attr.terraform_workspace.data_runfiles.files)
 
     ctx.actions.expand_template(
-            template = ctx.file._runner_template,
-            substitutions = {
-                "%{render_tf}": ctx.executable.terraform_workspace.short_path,
-                "%{srctest}": ctx.executable.srctest.short_path,
-            },
-            output = ctx.outputs.executable,
-            is_executable = True,
-        )
+        template = ctx.file._runner_template,
+        substitutions = {
+            "%{render_tf}": ctx.executable.terraform_workspace.short_path,
+            "%{srctest}": ctx.executable.srctest.short_path,
+            "%{stern}": ctx.executable._stern.short_path,
+        },
+        output = ctx.outputs.executable,
+        is_executable = True,
+    )
 
     return [DefaultInfo(
         runfiles = ctx.runfiles(
@@ -50,6 +52,11 @@ terraform_integration_test = rule(
         "_runner_template": attr.label(
             default = "//terraform/internal:integration_test_runner.sh.tpl",
             allow_single_file = True,
+        ),
+        "_stern": attr.label(
+            executable = True,
+            cfg = "host",
+            default = "@tool_stern",
         ),
     },
 )

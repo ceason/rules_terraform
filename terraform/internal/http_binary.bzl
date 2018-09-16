@@ -9,7 +9,7 @@ def _expand_template(s, ctx, platform_info):
         Platform = platform_info.platform_name.capitalize(),
         PLATFORM = platform_info.platform_name.upper(),
         platform = platform_info.platform_name.lower(),
-        version = ctx.attr.version
+        version = ctx.attr.version,
     )
 
 def _host_platform_info(ctx):
@@ -26,37 +26,42 @@ def _host_platform_info(ctx):
     else:
         fail("Unsupported operating system: " + ctx.os.name)
     return struct(
-        platform_name = platform_name
+        platform_name = platform_name,
     )
 
-
 def _http_archive_binary_impl(ctx):
-
     info = _host_platform_info(ctx)
+
     # expand template for attributes
     url = _expand_template(ctx.attr.url, ctx, info)
     strip_prefix = _expand_template(ctx.attr.strip_prefix, ctx, info) if ctx.attr.strip_prefix else ""
     path = _expand_template(ctx.attr.path, ctx, info)
+
     # append ".exe" if we're on windows
     if info.platform_name == "windows":
         path = path + ".exe"
 
     # create a launcher
-    ctx.file("WORKSPACE", content="""workspace(name = "%s")""" % ctx.attr.name)
-    ctx.file("BUILD.bazel", content="""
+    ctx.file("WORKSPACE", content = """workspace(name = "%s")""" % ctx.attr.name)
+    ctx.file("BUILD.bazel", content = """
 sh_binary(
     name = "binary",
     srcs = ["@{repository_name}//archive:{path}"],
     data = ["@{repository_name}//archive"],
+)
+alias(
+    name = "{repository_name}",
+    actual = ":binary",
     visibility = ["//visibility:public"],
 )
     """.format(
         repository_name = ctx.attr.name,
-        path = path
+        path = path,
     ))
+
     # download the archive
-    ctx.download_and_extract(url, output="archive", stripPrefix=strip_prefix)
-    ctx.file("archive/BUILD.bazel", content="""
+    ctx.download_and_extract(url, output = "archive", stripPrefix = strip_prefix)
+    ctx.file("archive/BUILD.bazel", content = """
 exports_files(glob(["**"]))
 
 filegroup(
@@ -65,7 +70,6 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """)
-
 
 http_archive_binary = repository_rule(
     implementation = _http_archive_binary_impl,
@@ -77,29 +81,34 @@ http_archive_binary = repository_rule(
         "host_binary": attr.string(
             # todo(ceason): Implement this
             default = "",
-            doc="Use the binary from the host's PATH (if exists) instead of downloading the archive."),
+            doc = "Use the binary from the host's PATH (if exists) instead of downloading the archive.",
+        ),
     },
 )
 
 def _http_file_binary_impl(ctx):
     info = _host_platform_info(ctx)
+
     # expand template for attributes
     url = _expand_template(ctx.attr.url, ctx, info)
     filename = "file.exe" if info.platform_name == "windows" else "file"
 
     # create a launcher
-    ctx.file("WORKSPACE", content="""workspace(name = "%s")""" % ctx.attr.name)
-    ctx.file("BUILD.bazel", content="""
+    ctx.file("WORKSPACE", content = """workspace(name = "%s")""" % ctx.attr.name)
+    ctx.file("BUILD.bazel", content = """
 sh_binary(
     name = "binary",
     srcs = ["{filename}"],
+)
+alias(
+    name = "{repository_name}",
+    actual = ":binary",
     visibility = ["//visibility:public"],
 )
-    """.format(filename = filename))
+    """.format(filename = filename, repository_name = ctx.attr.name))
+
     # download file to the appropriate location
-    ctx.download(url, output="file", executable=True)
-
-
+    ctx.download(url, output = "file", executable = True)
 
 http_file_binary = repository_rule(
     implementation = _http_file_binary_impl,
@@ -109,6 +118,7 @@ http_file_binary = repository_rule(
         "host_binary": attr.string(
             # todo(ceason): Implement this
             default = "",
-            doc="Use the binary from the host's PATH (if exists) instead of downloading the archive."),
+            doc = "Use the binary from the host's PATH (if exists) instead of downloading the archive.",
+        ),
     },
 )

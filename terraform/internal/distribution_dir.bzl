@@ -74,12 +74,12 @@ terraform_distribution_dir = rule(
             allow_files = True,
         ),
         "_terraform_docs": attr.label(
-            default = Label("@tool_terraform_docs//:binary"),
+            default = Label("@tool_terraform_docs"),
             executable = True,
             cfg = "host",
         ),
         "_terraform": attr.label(
-            default = Label("@tool_terraform//:binary"),
+            default = Label("@tool_terraform"),
             executable = True,
             cfg = "host",
         ),

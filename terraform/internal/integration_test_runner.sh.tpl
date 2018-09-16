@@ -22,6 +22,7 @@ cleanup(){
 trap cleanup EXIT
 
 render_tf="%{render_tf}"
+stern="%{stern}"
 SRCTEST="%{srctest}"
 
 : ${TMPDIR:=/tmp}
@@ -48,7 +49,7 @@ timeout 20 terraform validate "$tfroot"
 timeout 20 terraform plan -out="$tfplan" -input=false "$tfroot"
 
 # tail stuff with stern in the background
-stern '.*' --tail 1 --color always &
+$stern '.*' --tail 1 --color always &
 
 # apply the terraform
 ITS_A_TRAP+=("terraform destroy -state='$tfstate' -auto-approve -refresh=false")

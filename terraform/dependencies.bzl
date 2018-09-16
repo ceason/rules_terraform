@@ -16,11 +16,6 @@ _EXTERNAL_BINARIES = {
         path = "terraform",
         version = "0.11.7",
     ),
-    "mvn": dict(
-        path = "apache-maven-{version}/bin/mvn",
-        url = "http://mirrors.sonic.net/apache/maven/maven-3/{version}/binaries/apache-maven-{version}-bin.tar.gz",
-        version = "3.5.4",
-    ),
     "yq": dict(
         url = "https://github.com/mikefarah/yq/releases/download/{version}/yq_{platform}_amd64",
         version = "2.1.1",
