@@ -83,8 +83,6 @@ for script in "${distdir_scripts[@]}"; do
 done
 wait
 
-exit 1
-
 # Prompt user to publish changes if there are any
 if git diff --quiet -w --cached; then
 	echo "There are no changes to the release files"
