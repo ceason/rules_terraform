@@ -1,6 +1,4 @@
-load("//terraform/internal:plugin.bzl", "terraform_plugin")
-load("//terraform/internal:module.bzl", "terraform_module")
-load("//terraform/internal:workspace.bzl", _terraform_workspace = "terraform_workspace")
+load("//terraform/internal:terraform.bzl", _terraform_workspace = "terraform_workspace", "terraform_plugin", "terraform_module")
 load("//terraform/internal:test.bzl", "terraform_integration_test")
 load("//terraform/internal:distribution.bzl", "terraform_distribution_publisher", _terraform_distribution_dir = "terraform_distribution_dir")
 

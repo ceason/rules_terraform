@@ -1,5 +1,5 @@
 load("//terraform:providers.bzl", "DistributionDirInfo", "ModuleInfo", "PluginInfo")
-load(":module.bzl", "terraform_module")
+load(":terraform.bzl", "terraform_module")
 load(":util.bzl", "merge_filemap_dict")
 
 def _distribution_dir_impl(ctx):
