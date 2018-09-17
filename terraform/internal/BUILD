@@ -8,20 +8,25 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
-[skylark_doc(
-    name = "docs-" + format,
-    srcs = [
-        "distribution_dir.bzl",
-        "distribution_publisher.bzl",
-        "integration_test.bzl",
-        "module.bzl",
-        "plugin.bzl",
-        "workspace.bzl",
-    ],
-    format = format,
+DOC_SRCS = [
+    "distribution.bzl",
+    "test.bzl",
+    "terraform.bzl",
+]
+
+skylark_doc(
+    name = "docs-markdown",
+    srcs = DOC_SRCS,
+    format = "markdown",
     strip_prefix = "terraform/internal",
     visibility = ["//visibility:public"],
-) for format in [
-    "html",
-    "markdown",
-]]
+    overview_filename = "README",
+)
+
+skylark_doc(
+    name = "docs-html",
+    srcs = DOC_SRCS,
+    format = "html",
+    strip_prefix = "terraform/internal",
+    visibility = ["//visibility:public"],
+)

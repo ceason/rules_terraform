@@ -1,7 +1,100 @@
 load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo")
 load(":util.bzl", "merge_filemap_dict")
 
-def _impl(ctx):
+def _plugin_impl(ctx):
+    """
+    """
+    file_map = {}
+    for f in ctx.files.srcs:
+        plugin_path = "/".join(f.path.split("/")[-2:])
+        file_map[plugin_path] = f
+    return [PluginInfo(files = file_map)]
+
+terraform_plugin = rule(
+    implementation = _plugin_impl,
+    attrs = {
+        "srcs": attr.label_list(
+            doc = "These files will be placed in the 'terraform.d/plugins' directory in the TF workspace root.",
+            allow_files = True,
+        ),
+    },
+)
+
+def _module_impl(ctx):
+    """
+    """
+
+    # aggregate plugins/deps/etc
+    files = {}
+    k8s_objects = []
+    transitive_k8s_objects = []
+    runfiles = []
+    transitive_runfiles = []
+    plugins = [p for p in ctx.attr.plugins]
+    transitive_plugins = []
+    for f in ctx.files.srcs:
+        label = f.owner or ctx.label
+        prefix = label.package + "/"
+        path = f.short_path[len(prefix):]
+        files[path] = f
+        runfiles.append(f)
+    for dep in ctx.attr.deps:
+        transitive_runfiles.append(dep.default_runfiles.files)
+        if ModuleInfo in dep:
+            mi = dep[ModuleInfo]
+            files = merge_filemap_dict(files, mi.files)
+            if mi.k8s_objects:
+                transitive_k8s_objects.append(mi.k8s_objects)
+            if mi.plugins:
+                transitive_plugins.append(mi.plugins)
+        else:
+            # we assume this is a '_k8s_object'...
+            l = dep.label
+            k8s_executable = "%s/%s" % (l.package, l.name)
+            k8s_objects.append(k8s_executable)
+
+    # add default kubectl plugin if no plugins are specified
+    if k8s_objects and not ctx.attr.plugins:
+        plugins.append(ctx.attr._default_kubectl_plugin)
+
+    return [
+        ModuleInfo(
+            files = files,
+            plugins = depset(direct = plugins, transitive = transitive_plugins),
+            k8s_objects = depset(direct = k8s_objects, transitive = transitive_k8s_objects),
+        ),
+        DefaultInfo(
+            runfiles = ctx.runfiles(
+                files = runfiles,
+                transitive_files = depset(transitive = transitive_runfiles),
+            ),
+        ),
+    ]
+
+terraform_module = rule(
+    implementation = _module_impl,
+    attrs = {
+        "srcs": attr.label_list(allow_files = True),
+        "deps": attr.label_list(
+            # we should use "providers" instead, but "k8s_object" does not
+            # currently (2018-9-8) support them
+            allow_rules = [
+                "_k8s_object",
+                "terraform_module",
+            ],
+        ),
+        "plugins": attr.label_list(
+            providers = [PluginInfo],
+        ),
+        "_default_kubectl_plugin": attr.label(
+            providers = [PluginInfo],
+            default = "//terraform/plugins/kubectl",
+        ),
+    },
+)
+
+
+def _workspace_impl(ctx):
     """
     """
     runfiles = []
@@ -103,7 +196,7 @@ def _impl(ctx):
     ), WorkspaceInfo()]
 
 terraform_workspace = rule(
-    implementation = _impl,
+    implementation = _workspace_impl,
     executable = True,
     attrs = {
         "srcs": attr.label_list(allow_files = True),
@@ -129,22 +222,4 @@ terraform_workspace = rule(
     },
 )
 
-def terraform_workspace_macro(name, **kwargs):
-    terraform_workspace(
-        name = name,
-        **kwargs
-    )
 
-    # create a convenient destroy target which
-    # CDs to the package dir and runs terraform destroy
-    native.genrule(
-        name = "%s.destroy" % name,
-        outs = ["%s.destroy.sh"],
-        cmd = """
-            echo '#!/bin/sh
-cd $$BUILD_WORKSPACE_DIRECTORY/{package}
-exec terraform destroy "$$@"
-' > $@
-        """.format(package = native.package_name()),
-        executable = True,
-    )

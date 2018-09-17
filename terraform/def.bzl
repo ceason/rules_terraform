@@ -1,17 +1,53 @@
 load("//terraform/internal:plugin.bzl", "terraform_plugin")
 load("//terraform/internal:module.bzl", "terraform_module")
-load("//terraform/internal:workspace.bzl", terraform_workspace = "terraform_workspace_macro")
-load("//terraform/internal:integration_test.bzl", "terraform_integration_test")
-load("//terraform/internal:distribution_dir.bzl", terraform_distribution_dir = "terraform_distribution_dir_macro")
-load("//terraform/internal:distribution_publisher.bzl", "terraform_distribution_publisher")
+load("//terraform/internal:workspace.bzl", _terraform_workspace = "terraform_workspace")
+load("//terraform/internal:test.bzl", "terraform_integration_test")
+load("//terraform/internal:distribution.bzl", "terraform_distribution_publisher", _terraform_distribution_dir = "terraform_distribution_dir")
 
-#
-#
-# Targets need to propagate this info..
-# - list of "output file generator executables" (eg k8s_object which generates files when run)
-# - map of target filename => File (aggregated from `src` and `deps`)
-# - list of provider labels
-# - map of module Label => name (validate 1:1 relationship between label/name)
-#   - ^ these will show up under the root module at `modules/{name}`
-#
-#
+def terraform_distribution_dir(name, deps, **kwargs):
+    srcs_name = "%s.srcs-list" % name
+    module_name = "%s.module" % name
+
+    # change "relative" deps to absolute deps
+    deps_abs = [
+        "//" + native.package_name() + dep if dep.startswith(":") else dep
+        for dep in deps
+    ]
+    native.genquery(
+        name = srcs_name,
+        opts = ["--noimplicit_deps"],
+        expression = """kind("source file", deps(set(%s)))""" % " ".join(deps_abs),
+        scope = deps_abs,
+    )
+
+    terraform_module(
+        name = module_name,
+        deps = deps_abs,
+    )
+
+    _terraform_distribution_dir(
+        name = name,
+        srcs_list = ":" + srcs_name,
+        module = ":" + module_name,
+        **kwargs
+    )
+
+def terraform_workspace(name, **kwargs):
+    _terraform_workspace(
+        name = name,
+        **kwargs
+    )
+
+    # create a convenient destroy target which
+    # CDs to the package dir and runs terraform destroy
+    native.genrule(
+        name = "%s.destroy" % name,
+        outs = ["%s.destroy.sh"],
+        cmd = """
+            echo '#!/bin/sh
+cd $$BUILD_WORKSPACE_DIRECTORY/{package}
+exec terraform destroy "$$@"
+' > $@
+        """.format(package = native.package_name()),
+        executable = True,
+    )

@@ -1,6 +1,6 @@
 load("//terraform:providers.bzl", "WorkspaceInfo")
 
-def _impl(ctx):
+def _integration_test_impl(ctx):
     """
     """
 
@@ -34,7 +34,7 @@ def _impl(ctx):
 # Wraps the source test with infrastructure spinup and teardown
 terraform_integration_test = rule(
     test = True,
-    implementation = _impl,
+    implementation = _integration_test_impl,
     attrs = {
         "terraform_workspace": attr.label(
             doc = "TF Workspace to spin up before testing & tear down after testing.",
