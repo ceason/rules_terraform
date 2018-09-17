@@ -1,2 +1,2 @@
 
-(Rules Documentation)[https://ceason.github.io/rules_terraform/]
+[Rules Documentation](https://ceason.github.io/rules_terraform/)
