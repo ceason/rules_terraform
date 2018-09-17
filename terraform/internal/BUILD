@@ -29,4 +29,5 @@ skylark_doc(
     format = "html",
     strip_prefix = "terraform/internal",
     visibility = ["//visibility:public"],
+    site_root = "rules_terraform",
 )
