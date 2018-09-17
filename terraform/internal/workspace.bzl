@@ -114,7 +114,9 @@ terraform_workspace = rule(
             ],
         ),
         "modules": attr.label_keyed_string_dict(
-            providers = [ModuleInfo],
+            # hack: disabling provider check until doc generator supports 'providers' attribute
+            #   see https://github.com/bazelbuild/skydoc/blob/master/skydoc/stubs/attr.py#L180
+            # providers = [ModuleInfo],
         ),
         "plugins": attr.label_list(
             providers = [PluginInfo],
