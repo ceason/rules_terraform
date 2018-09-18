@@ -62,6 +62,7 @@ def _module_impl(ctx):
             files = files,
             plugins = depset(direct = plugins, transitive = transitive_plugins),
             k8s_objects = depset(direct = k8s_objects, transitive = transitive_k8s_objects),
+            description = ctx.attr.description,
         ),
         DefaultInfo(
             runfiles = ctx.runfiles(
@@ -83,6 +84,10 @@ terraform_module = rule(
                 "terraform_module",
             ],
         ),
+        "description": attr.string(
+            doc = "Optional description of module.",
+            default = "",
+        ),
         "plugins": attr.label_list(
             providers = [PluginInfo],
         ),
@@ -92,7 +97,6 @@ terraform_module = rule(
         ),
     },
 )
-
 
 def _workspace_impl(ctx):
     """
@@ -221,5 +225,3 @@ terraform_workspace = rule(
         ),
     },
 )
-
-

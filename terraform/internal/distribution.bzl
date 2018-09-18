@@ -43,7 +43,7 @@ def _distribution_dir_impl(ctx):
             "%{package}": ctx.label.package,
             "%{workspace_name}": ctx.workspace_name,
             "%{srcs_list_path}": ctx.file.srcs_list.short_path,
-            "%{readme_description}": ctx.attr.description,
+            "%{readme_description}": ctx.attr.description or module.description,
             "%{render_tf}": ctx.executable._render_tf.short_path,
             "%{argsfile}": renderer_argsfile.short_path,
         },
@@ -91,9 +91,6 @@ terraform_distribution_dir = rule(
     },
     executable = True,
 )
-
-
-
 
 def _distribution_publisher_impl(ctx):
     """
@@ -163,3 +160,31 @@ terraform_distribution_publisher = rule(
     },
     executable = True,
 )
+
+def terraform_module_publisher(name, published_modules = {}, **kwargs):
+    """
+    """
+
+    # for each output path, create a 'distribution_dir' & srcs list
+    dist_dirs = []
+    for path, label in published_modules.items():
+        label_abs = "//" + native.package_name() + label if label.startswith(":") else label
+        srcs_name = "%s.srcs-list" % path
+        native.genquery(
+            name = srcs_name,
+            opts = ["--noimplicit_deps"],
+            expression = """kind("source file", deps(%s))""" % label_abs,
+            scope = [label_abs],
+        )
+        dist_dirs.append(":%s" % path)
+        terraform_distribution_dir(
+            name = path,
+            module = label,
+            srcs_list = srcs_name,
+        )
+
+    terraform_distribution_publisher(
+        name = name,
+        deps = dist_dirs,
+        **kwargs
+    )
