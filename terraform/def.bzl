@@ -44,7 +44,7 @@ def terraform_workspace(name, **kwargs):
         cmd = """
             echo '#!/bin/sh
 cd $$BUILD_WORKSPACE_DIRECTORY/{package}
-exec terraform destroy "$$@"
+exec terraform destroy "$$@" .terraform/tfroot
 ' > $@
         """.format(package = native.package_name()),
         executable = True,
