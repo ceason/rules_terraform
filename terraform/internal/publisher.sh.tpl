@@ -23,11 +23,13 @@ trap cleanup EXIT
 
 export RUNFILES=${RUNFILES:=$0.runfiles}
 export PYTHON_RUNFILES=${PYTHON_RUNFILES:=$0.runfiles}
-
 RELEASE_VARS=(%{env_vars})
 PREPUBLISH_TESTS=(%{prepublish_tests})
 PREPUBLISH_BUILDS=(%{prepublish_builds})
 DISTRIB_DIR_TARGETS=(%{distrib_dir_targets})
+REMOTE="%{remote}"
+REMOTE_PATH="%{remote_path}"
+REMOTE_BRANCH="%{remote_branch}"
 
 cd "$BUILD_WORKSPACE_DIRECTORY"
 
@@ -48,6 +50,18 @@ _bazel(){
 	esac
 }
 
+_git(){
+	local cmdout=$(mktemp)
+	if git "$@" > "$cmdout" 2>&1; then
+		rm -rf "$cmdout"
+	else
+		rc=$?
+		>&2 cat "$cmdout"
+		rm -rf "$cmdout"
+		exit $rc
+	fi
+}
+
 if [ ${#PREPUBLISH_BUILDS[@]} -gt 0 ]; then
 	>&2 echo "Building: $(printf "\n  %s" "${PREPUBLISH_BUILDS[@]}")"
 	_bazel build -- "${PREPUBLISH_BUILDS[@]}"
@@ -62,12 +76,14 @@ fi
 # then run them in parallel
 distdir_scripts=()
 trap 'for f in ${distdir_scripts[@]}; do rm -rf $f; done' EXIT
-for t in "${DISTRIB_DIR_TARGETS[@]}"; do
+for item in "${DISTRIB_DIR_TARGETS[@]}"; do
+	name=$(cut -d'=' -f1 <<< "$item")
+	label=$(cut -d'=' -f2 <<< "$item")
 	script=$(mktemp)
-	distdir_scripts+=("$script")
+	distdir_scripts+=("${name}=${script}")
 	ITS_A_TRAP+=("rm -rf '$script'")
 	cmdout=$(mktemp)
-	if env "${RELEASE_VARS[@]}" bazel run --script_path=$script "$t" > "$cmdout" 2>&1; then
+	if env "${RELEASE_VARS[@]}" bazel run --script_path=$script "$label" > "$cmdout" 2>&1; then
 		rm -rf "$cmdout"
 	else
 		rc=$?
@@ -77,18 +93,43 @@ for t in "${DISTRIB_DIR_TARGETS[@]}"; do
 	fi
 done
 
->&2 echo "Updating release directory"
-for script in "${distdir_scripts[@]}"; do
-    $script &
+# figure out what the "output root" is (ie is it our own repo, or a remote one...)
+OUTPUT_ROOT=$BUILD_WORKSPACE_DIRECTORY/%{package}
+UPDATE_DIR_MESSAGE="Updating release directory"
+if [ -n "${REMOTE:=""}" ]; then
+	# if it's a remote repo, clone down to a cache dir
+	sanitized_remote=$(tr '@/.:' '_' <<< "$REMOTE")
+	repo_dir="$HOME/.cache/rules_terraform_publisher/$sanitized_remote/$REMOTE_BRANCH"
+	if [ ! -e "$repo_dir" ]; then
+		git clone $REMOTE -b "$REMOTE_BRANCH" "$repo_dir"
+	else
+		pushd "$repo_dir" > /dev/null
+		_git reset --hard
+		_git clean -fxd
+		_git pull
+		popd > /dev/null
+	fi
+	OUTPUT_ROOT=$repo_dir/$REMOTE_PATH
+	UPDATE_DIR_MESSAGE="$UPDATE_DIR_MESSAGE ($REMOTE)"
+fi
+
+>&2 echo "$UPDATE_DIR_MESSAGE"
+for item in "${distdir_scripts[@]}"; do
+	name=$(cut -d'=' -f1 <<< "$item")
+	script=$(cut -d'=' -f2 <<< "$item")
+    $script --tgt-dir=$OUTPUT_ROOT/$name &
 done
 wait
 
 # Prompt user to publish changes if there are any
+cd "$OUTPUT_ROOT"
+cd "$(git rev-parse --show-toplevel)"
 if git diff --quiet -w --cached; then
 	echo "There are no changes to the release files"
 else
 	git status
-	while read -r -p "Would you like to publish these changes? [y]es|[n]o: "; do
+	while read -r -p "Would you like to publish these changes?
+[y]es, [n]o, show [d]iff: "; do
 	  case ${REPLY,,} in
 		y|yes)
 			git commit -m "Updating release dir"
@@ -96,6 +137,10 @@ else
 			break
 			;;
 		n|no) echo "Exiting without updating releasefiles"; break;;
+		d|diff)
+			git diff -w --cached
+			git status
+			;;
 		*) echo "Invalid option '$REPLY'";;
 	  esac
 	done

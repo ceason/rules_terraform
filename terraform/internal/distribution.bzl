@@ -39,8 +39,6 @@ def _distribution_dir_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         substitutions = {
-            "%{output_dir}": ctx.label.name,
-            "%{package}": ctx.label.package,
             "%{workspace_name}": ctx.workspace_name,
             "%{srcs_list_path}": ctx.file.srcs_list.short_path,
             "%{readme_description}": ctx.attr.description or module.description,
@@ -103,7 +101,7 @@ def _distribution_publisher_impl(ctx):
     for dep in ctx.attr.deps:
         transitive_runfiles.append(dep.data_runfiles.files)
         transitive_runfiles.append(dep.default_runfiles.files)
-        distrib_dir_targets.append(dep.label)
+        distrib_dir_targets.append("%s=%s" % (dep.label.name, dep.label))
 
     for name, value in ctx.attr.env.items():
         if "'" in name or "\\" in name or "=" in name:
@@ -120,6 +118,10 @@ def _distribution_publisher_impl(ctx):
             "%{prepublish_tests}": " ".join(["'%s'" % t for t in ctx.attr.prepublish_tests or []]),
             "%{prepublish_builds}": " ".join(["'%s'" % t for t in ctx.attr.prepublish_builds or []]),
             "%{distrib_dir_targets}": " ".join(distrib_dir_targets),
+            "%{package}": ctx.label.package,
+            "%{remote}": ctx.attr.remote or "",
+            "%{remote_path}": ctx.attr.remote_path or "",
+            "%{remote_branch}": ctx.attr.remote_branch or "master",
         },
         output = ctx.outputs.executable,
     )
@@ -136,6 +138,9 @@ def _distribution_publisher_impl(ctx):
 terraform_distribution_publisher = rule(
     implementation = _distribution_publisher_impl,
     attrs = {
+        "remote": attr.string(doc = "Git remote URI. Publish to this repo instead of a local directory."),
+        "remote_path": attr.string(),
+        "remote_branch": attr.string(default = "master"),
         "deps": attr.label_list(
             mandatory = True,
             providers = [DistributionDirInfo],

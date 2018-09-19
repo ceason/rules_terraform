@@ -8,11 +8,24 @@ trap err_report ERR
 export PYTHON_RUNFILES=${PYTHON_RUNFILES:=$0.runfiles}
 RUNFILES=${BASH_SOURCE[0]}.runfiles
 WORKSPACE_NAME="%{workspace_name}"
-TGT_DIR=$BUILD_WORKSPACE_DIRECTORY/%{package}/%{output_dir}
 SRCS_LIST_PATH=$RUNFILES/$WORKSPACE_NAME/%{srcs_list_path}
 README_DESCRIPTION="%{readme_description}"
 terraform_docs="$RUNFILES/tool_terraform_docs/binary"
 render_tf="%{render_tf}"
+
+for arg in "$@"; do case $arg in
+	--tgt-dir=*)
+		ARG_TGT_DIR="${arg#*=}"
+		;;
+	*)
+		>&2 echo "Unknown option '$arg'"
+		exit 1
+		;;
+esac done
+
+: ${ARG_TGT_DIR?"Missing Required argument --tgt-dir"}
+
+
 
 put-file(){
 	local filename=$1; shift
@@ -95,15 +108,15 @@ main(){
 	generate-readme "$STAGING_DIR"
 
 	# replace the target dir with the successfully populated staging dir
-	mkdir -p "$TGT_DIR"
-	chmod -R +w "$TGT_DIR"
-	rm -rf "$TGT_DIR"
-	mkdir -p $(dirname "$TGT_DIR")
-	mv "$STAGING_DIR" "$TGT_DIR"
-	chmod -R +rw "$TGT_DIR"
+	mkdir -p "$ARG_TGT_DIR"
+	chmod -R +w "$ARG_TGT_DIR"
+	rm -rf "$ARG_TGT_DIR"
+	mkdir -p $(dirname "$ARG_TGT_DIR")
+	mv "$STAGING_DIR" "$ARG_TGT_DIR"
+	chmod -R +rw "$ARG_TGT_DIR"
 
 	# Add this stuff to git
-	(cd "$TGT_DIR" && git add .)
+	(cd "$ARG_TGT_DIR" && git add .)
 }
 
 
