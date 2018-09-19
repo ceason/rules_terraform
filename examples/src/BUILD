@@ -20,9 +20,9 @@ terraform_module(
     name = "secret",
     srcs = ["secret.tf"],
     description = "This is an example terraform module, built with bazel!",
-    visibility = ["//visibility:public"],
-    deps = [
+    embed = [
         ":authz",
         ":manifests",
     ],
+    visibility = ["//visibility:public"],
 )

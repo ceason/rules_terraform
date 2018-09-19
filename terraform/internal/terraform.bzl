@@ -38,7 +38,13 @@ def _module_impl(ctx):
         path = f.short_path[len(prefix):]
         files[path] = f
         runfiles.append(f)
-    for dep in ctx.attr.deps:
+    if ctx.attr.deps:
+        print("Attribute 'deps' is deprecated. Use 'embed' instead (%s)" % ctx.label)
+
+    embeds = []
+    embeds.extend(ctx.attr.embed or [])
+    embeds.extend(ctx.attr.deps or [])
+    for dep in embeds:
         transitive_runfiles.append(dep.default_runfiles.files)
         if ModuleInfo in dep:
             mi = dep[ModuleInfo]
@@ -77,8 +83,16 @@ terraform_module = rule(
     attrs = {
         "srcs": attr.label_list(allow_files = True),
         "deps": attr.label_list(
+            doc = "Deprecated. Use 'embed' instead ('embed' is functionally identical to 'deps', but seems more semantically correct).",
+            allow_rules = [
+                "_k8s_object",
+                "terraform_module",
+            ],
+        ),
+        "embed": attr.label_list(
             # we should use "providers" instead, but "k8s_object" does not
             # currently (2018-9-8) support them
+            doc = "Merge the content of other <terraform_module>s (or <k8s_object>s) into this one.",
             allow_rules = [
                 "_k8s_object",
                 "terraform_module",
@@ -89,6 +103,7 @@ terraform_module = rule(
             default = "",
         ),
         "plugins": attr.label_list(
+            doc = "Custom Terraform plugins that this module requires.",
             providers = [PluginInfo],
         ),
         "_default_kubectl_plugin": attr.label(
