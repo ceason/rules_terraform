@@ -188,20 +188,29 @@ def _workspace_impl(ctx):
                       # 'rules_k8s' needs to have PYTHON_RUNFILES set
 
                       case "$command" in
-                      apply)
+                      apply|refresh)
                         # rm -rf "$plugin_dir" # potentially can't remove this else 'destroy' won't work if a provider is removed??
                         rm -rf "$tfroot"
                         {render_tf} '@{argsfile}' --output_dir "$tfroot" --plugin_dir "$plugin_dir"
 
                         cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
                         terraform init -input=false "$tfroot"
-                        terraform apply -auto-approve "$tfroot"
+                        terraform "$command" -backup=- "$tfroot"
                         ;;
                       destroy)
                         cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
-                        terraform destroy -refresh=false "$@" "$tfroot"
+                        terraform destroy -backup=- "$@" "$tfroot"
+                        ;;
+                      state|import)
+                        cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
+                        terraform "$command" "$@"
                         ;;
                       *)
+                        rm -rf "$tfroot"
+                        {render_tf} '@{argsfile}' --output_dir "$tfroot" --plugin_dir "$plugin_dir"
+
+                        cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
+                        terraform init -input=false "$tfroot"
                         terraform "$command" "$@" "$tfroot"
                         ;;
                       esac
