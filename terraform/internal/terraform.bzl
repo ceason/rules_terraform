@@ -4,19 +4,25 @@ load(":util.bzl", "merge_filemap_dict")
 def _plugin_impl(ctx):
     """
     """
+    filename = "terraform-provider-%s_%s" % (ctx.attr.provider_name or ctx.attr.name, ctx.attr.version)
     file_map = {}
-    for f in ctx.files.srcs:
-        plugin_path = "/".join(f.path.split("/")[-2:])
-        file_map[plugin_path] = f
+    if ctx.file.linux_amd64:
+        file_map["linux_amd64/%s" % filename] = ctx.file.linux_amd64
+    if ctx.file.darwin_amd64:
+        file_map["darwin_amd64/%s" % filename] = ctx.file.darwin_amd64
+    if ctx.file.windows_amd64:
+        file_map["windows_amd64/%s.exe" % filename] = ctx.file.windows_amd64
     return [PluginInfo(files = file_map)]
 
 terraform_plugin = rule(
     implementation = _plugin_impl,
     attrs = {
-        "srcs": attr.label_list(
-            doc = "These files will be placed in the 'terraform.d/plugins' directory in the TF workspace root.",
-            allow_files = True,
-        ),
+        # todo: maybe make version stampable?
+        "version": attr.string(mandatory = True),
+        "provider_name": attr.string(default = "", doc = "Name of terraform provider. Defaults to {name}"),
+        "linux_amd64": attr.label(allow_single_file = True),
+        "darwin_amd64": attr.label(allow_single_file = True),
+        "windows_amd64": attr.label(allow_single_file = True),
     },
 )
 
