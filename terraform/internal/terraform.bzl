@@ -52,6 +52,7 @@ def _module_impl(ctx):
     embeds = []
     embeds.extend(ctx.attr.embed or [])
     embeds.extend(ctx.attr.deps or [])
+    has_k8s_embeds = False
     for dep in embeds:
         transitive_runfiles.append(dep.default_runfiles.files)
         if ModuleInfo in dep:
@@ -72,6 +73,7 @@ def _module_impl(ctx):
         else:
             # we assume this is a '_k8s_object'...
             # todo: better way to do this? (eg does 'dep.kind' exist)
+            has_k8s_embeds = True
             k8s_objects.append(struct(target = dep, output_prefix = ""))
 
     for m, module_name in ctx.attr.modules.items():
@@ -95,7 +97,7 @@ def _module_impl(ctx):
         }.values()
 
     # add default kubectl plugin if no plugins are specified
-    if k8s_objects and not ctx.attr.plugins:
+    if has_k8s_embeds and not ctx.attr.plugins:
         plugins.append(ctx.attr._default_kubectl_plugin)
 
     # bundle the renderer with args for the content of this tf module
@@ -106,7 +108,7 @@ def _module_impl(ctx):
     runfiles.append(render_tf_argsfile)
     transitive_runfiles.append(ctx.attr._render_tf.default_runfiles.files)
 
-    plugins_depset = depset(direct = ctx.attr.plugins, transitive = transitive_plugins)
+    plugins_depset = depset(direct = plugins, transitive = transitive_plugins)
     for p in plugins_depset.to_list():
         plugin = p[PluginInfo]
         for filename, file in plugin.files.items():
@@ -117,7 +119,7 @@ def _module_impl(ctx):
         runfiles.append(f)
     for obj in k8s_objects:
         executable = obj.target.files_to_run.executable.short_path
-        render_tf_args.extend(["--k8s_object", obj.output_prefix, executable])
+        render_tf_args.extend(["--k8s_object", obj.output_prefix or ".", executable])
         transitive_runfiles.append(obj.target.default_runfiles.files)
 
     ctx.actions.write(render_tf_argsfile, "\n".join(render_tf_args))
@@ -206,15 +208,19 @@ _common_attrs = {
 
 terraform_module = rule(
     implementation = _module_impl,
-    attrs = dict(_common_attrs.items(),
+    attrs = dict(
+        _common_attrs.items(),
         # hack: this flag lets us share the same implementation function as 'terraform_module'
-        _is_workspace= attr.bool(default = False)),
+        _is_workspace = attr.bool(default = False),
+    ),
 )
 
 terraform_workspace = rule(
     implementation = _module_impl,
     executable = True,
-    attrs = dict(_common_attrs.items(),
+    attrs = dict(
+        _common_attrs.items(),
         # hack: this flag lets us share the same implementation function as 'terraform_module'
-        _is_workspace= attr.bool(default = True)),
+        _is_workspace = attr.bool(default = True),
+    ),
 )
