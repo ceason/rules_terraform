@@ -103,7 +103,7 @@ main(){
 	# build up the new release dir in a separate location
 	local STAGING_DIR=$(mktemp -d)
 
-	$render_tf '@%{argsfile}' --output_dir "$STAGING_DIR" --plugin_dir "$STAGING_DIR/terraform.d/plugins"
+	$render_tf --output_dir "$STAGING_DIR" --plugin_dir "$STAGING_DIR/terraform.d/plugins"
 	generate-changelog "$STAGING_DIR"
 	generate-readme "$STAGING_DIR"
 
