@@ -24,9 +24,11 @@ trap cleanup EXIT
 render_tf="%{render_tf}"
 stern="%{stern}"
 SRCTEST="%{srctest}"
+tf_workspace_files_prefix="%{tf_workspace_files_prefix}"
+mkdir -p "$tf_workspace_files_prefix"
 
 : ${TMPDIR:=/tmp}
-: ${TF_PLUGIN_CACHE_DIR:=$TMPDIR/terraform-plugin-cache}
+: ${TF_PLUGIN_CACHE_DIR:=$TMPDIR/rules_terraform/plugin-cache}
 export TF_PLUGIN_CACHE_DIR
 mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
@@ -41,19 +43,23 @@ tfstate=$TEST_TMPDIR/tf/tfstate.json
 rm -rf "$TEST_TMPDIR/tf"
 mkdir -p "$TEST_TMPDIR/tf"
 chmod 700 $(dirname "$tfstate")
-$render_tf render --output_dir "$tfroot" --plugin_dir .terraform/plugins
+"$render_tf" --output_dir "$tfroot" --plugin_dir "$tf_workspace_files_prefix/.terraform/plugins" --symlink_plugins
 
 # init and validate terraform
+pushd "$tf_workspace_files_prefix" > /dev/null
 timeout 20 terraform init -input=false "$tfroot"
 timeout 20 terraform validate "$tfroot"
 timeout 20 terraform plan -out="$tfplan" -input=false "$tfroot"
+popd > /dev/null
 
 # tail stuff with stern in the background
 $stern '.*' --tail 1 --color always &
 
 # apply the terraform
-ITS_A_TRAP+=("terraform destroy -state='$tfstate' -auto-approve -refresh=false")
+ITS_A_TRAP+=("cd '$tf_workspace_files_prefix' && terraform destroy -state='$tfstate' -auto-approve -refresh=false")
+pushd "$tf_workspace_files_prefix" > /dev/null
 terraform apply -state-out="$tfstate" -auto-approve "$tfplan"
+popd > /dev/null
 
 # run the test & await its completion
 #echo "pwd:$PWD"

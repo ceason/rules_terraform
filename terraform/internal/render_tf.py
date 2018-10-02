@@ -28,8 +28,12 @@ parser.add_argument(
 
 parser.add_argument(
 	'--plugin_dir', action='store',
-	help='Location to place terraform plugin files (eg .terraform/plugins, terraform.d/plugins, etc ). If unspecified, no plugin files will be output.'
-)
+	help='Location to place terraform plugin files (eg .terraform/plugins, terraform.d/plugins, etc ). If unspecified, no plugin files will be output.')
+
+parser.add_argument(
+	'--symlink_plugins', dest='symlink_plugins', action='store_true',
+	default=False,
+	help="Symlink plugin files into the output directory rather than copying them (note: not currently implemented)")
 
 
 def put_file(output_path, src=None, content=None, overwrite=False):

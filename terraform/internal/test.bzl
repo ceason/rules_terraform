@@ -1,4 +1,4 @@
-load("//terraform:providers.bzl", "WorkspaceInfo")
+load("//terraform:providers.bzl", "WorkspaceInfo", "tf_workspace_files_prefix")
 
 def _integration_test_impl(ctx):
     """
@@ -11,13 +11,15 @@ def _integration_test_impl(ctx):
     transitive_runfiles.append(ctx.attr._stern.data_runfiles.files)
     transitive_runfiles.append(ctx.attr.srctest.data_runfiles.files)
     transitive_runfiles.append(ctx.attr.terraform_workspace.data_runfiles.files)
+    render_tf = ctx.attr.terraform_workspace[WorkspaceInfo].render_tf
 
     ctx.actions.expand_template(
         template = ctx.file._runner_template,
         substitutions = {
-            "%{render_tf}": ctx.executable.terraform_workspace.short_path,
+            "%{render_tf}": render_tf.short_path,
             "%{srctest}": ctx.executable.srctest.short_path,
             "%{stern}": ctx.executable._stern.short_path,
+            "%{tf_workspace_files_prefix}": tf_workspace_files_prefix(ctx.attr.terraform_workspace),
         },
         output = ctx.outputs.executable,
         is_executable = True,

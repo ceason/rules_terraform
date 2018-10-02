@@ -1,5 +1,4 @@
-load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo")
-load(":util.bzl", "merge_filemap_dict")
+load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo", "tf_workspace_files_prefix")
 
 def _plugin_impl(ctx):
     """
@@ -31,9 +30,8 @@ def _module_impl(ctx):
     """
 
     # aggregate plugins/deps/etc
-    files = {}
+    file_map = {}
     k8s_objects = []
-    transitive_k8s_objects = []
     runfiles = []
     transitive_runfiles = []
     plugins = [p for p in ctx.attr.plugins]
@@ -42,10 +40,14 @@ def _module_impl(ctx):
         label = f.owner or ctx.label
         prefix = label.package + "/"
         path = f.short_path[len(prefix):]
-        files[path] = f
+        file_map[path] = f
         runfiles.append(f)
     if ctx.attr.deps:
         print("Attribute 'deps' is deprecated. Use 'embed' instead (%s)" % ctx.label)
+
+    # todo: validate that no files (src or embedded) collide with 'modules' attribute (eg module is
+    # only thing allowed to populate its subpath)
+    # - test that `filepath` does not begin with `module+"/"` for all configured modules
 
     embeds = []
     embeds.extend(ctx.attr.embed or [])
@@ -54,204 +56,165 @@ def _module_impl(ctx):
         transitive_runfiles.append(dep.default_runfiles.files)
         if ModuleInfo in dep:
             mi = dep[ModuleInfo]
-            files = merge_filemap_dict(files, mi.files)
+            for filename, file in mi.files.items():
+                if filename in file_map and file_map[filename] != file:
+                    fail("Cannot embed file '%s' from module '%s' because it already comes from '%s'" % (
+                        filename,
+                        dep.label,
+                        file_map[filename].short_path,
+                    ), attr = "embed")
+                else:
+                    file_map[filename] = file
             if mi.k8s_objects:
-                transitive_k8s_objects.append(mi.k8s_objects)
+                k8s_objects.extend(mi.k8s_objects)
             if mi.plugins:
                 transitive_plugins.append(mi.plugins)
         else:
             # we assume this is a '_k8s_object'...
-            l = dep.label
-            k8s_executable = "%s/%s" % (l.package, l.name)
-            k8s_objects.append(k8s_executable)
+            # todo: better way to do this? (eg does 'dep.kind' exist)
+            k8s_objects.append(struct(target = dep, output_prefix = ""))
+
+    for m, module_name in ctx.attr.modules.items():
+        module = m[ModuleInfo]
+        transitive_runfiles.append(m.default_runfiles.files)
+        for filename, file in module.files.items():
+            file_map["%s/%s" % (module_name, filename)] = file
+        for o in module.k8s_objects:
+            k8s_objects.append(struct(
+                target = o.target,
+                output_prefix = "%s/%s" % (module_name, o.output_prefix),
+            ))
+        if module.plugins:
+            transitive_plugins.append(module.plugins)
+
+    # dedupe any k8s objects we got
+    if k8s_objects:
+        k8s_objects = {
+            "%s:%s" % (o.target.label, o.output_prefix): o
+            for o in k8s_objects
+        }.values()
 
     # add default kubectl plugin if no plugins are specified
     if k8s_objects and not ctx.attr.plugins:
         plugins.append(ctx.attr._default_kubectl_plugin)
 
-    return [
-        ModuleInfo(
-            files = files,
-            plugins = depset(direct = plugins, transitive = transitive_plugins),
-            k8s_objects = depset(direct = k8s_objects, transitive = transitive_k8s_objects),
-            description = ctx.attr.description,
-        ),
-        DefaultInfo(
-            runfiles = ctx.runfiles(
-                files = runfiles,
-                transitive_files = depset(transitive = transitive_runfiles),
-            ),
-        ),
-    ]
+    # bundle the renderer with args for the content of this tf module
+    render_tf = ctx.actions.declare_file("%s.render-tf" % ctx.attr.name)
+    render_tf_argsfile = ctx.actions.declare_file("%s.render-tf-args" % ctx.attr.name)
+    render_tf_args = []  # add all files, module files, k8s_objects and plugin files
+    runfiles.append(render_tf)
+    runfiles.append(render_tf_argsfile)
+    transitive_runfiles.append(ctx.attr._render_tf.default_runfiles.files)
 
-terraform_module = rule(
-    implementation = _module_impl,
-    attrs = {
-        "srcs": attr.label_list(allow_files = True),
-        "deps": attr.label_list(
-            doc = "Deprecated. Use 'embed' instead ('embed' is functionally identical to 'deps', but seems more semantically correct).",
-            allow_rules = [
-                "_k8s_object",
-                "terraform_module",
-            ],
-        ),
-        "embed": attr.label_list(
-            # we should use "providers" instead, but "k8s_object" does not
-            # currently (2018-9-8) support them
-            doc = "Merge the content of other <terraform_module>s (or <k8s_object>s) into this one.",
-            allow_rules = [
-                "_k8s_object",
-                "terraform_module",
-            ],
-        ),
-        "description": attr.string(
-            doc = "Optional description of module.",
-            default = "",
-        ),
-        "plugins": attr.label_list(
-            doc = "Custom Terraform plugins that this module requires.",
-            providers = [PluginInfo],
-        ),
-        "_default_kubectl_plugin": attr.label(
-            providers = [PluginInfo],
-            default = "//terraform/plugins/kubectl",
-        ),
-    },
-)
-
-def _workspace_impl(ctx):
-    """
-    """
-    runfiles = []
-    transitive_runfiles = []
-    transitive_plugins = []
-    renderer_args = []  # add all files, module files, k8s_objects and plugin files
-
-    for f in ctx.files.srcs:
-        label = f.owner or ctx.label
-        prefix = label.package + "/"
-        path = f.short_path[len(prefix):]
-        renderer_args.extend(["--file", path, f.short_path])
-        runfiles.append(f)
-
-    for dep in ctx.attr.deps:
-        transitive_runfiles.append(dep.default_runfiles.files)
-
-        # we assume this is a '_k8s_object'...
-        l = dep.label
-        k8s_executable = "%s/%s" % (l.package, l.name)
-        renderer_args.extend(["--k8s_object", ".", k8s_executable])
-
-    for m, name in ctx.attr.modules.items():
-        module = m[ModuleInfo]
-        transitive_runfiles.append(m.default_runfiles.files)
-        for path, file in module.files.items():
-            renderer_args.extend(["--file", name + "/" + path, file.short_path])
-            runfiles.append(file)
-
-        for o in module.k8s_objects.to_list():
-            renderer_args.extend(["--k8s_object", name, o])
-
-        if module.plugins:
-            transitive_plugins.append(module.plugins)
-
-    plugins = depset(direct = ctx.attr.plugins, transitive = transitive_plugins)
-
-    for p in plugins.to_list():
+    plugins_depset = depset(direct = ctx.attr.plugins, transitive = transitive_plugins)
+    for p in plugins_depset.to_list():
         plugin = p[PluginInfo]
-        for path, file in plugin.files.items():
-            renderer_args.extend(["--plugin_file", path, file.short_path])
+        for filename, file in plugin.files.items():
+            render_tf_args.extend(["--plugin_file", filename, file.short_path])
             runfiles.append(file)
+    for filename, file in file_map.items():
+        render_tf_args.extend(["--file", filename, file.short_path])
+        runfiles.append(f)
+    for obj in k8s_objects:
+        executable = obj.target.files_to_run.executable.short_path
+        render_tf_args.extend(["--k8s_object", obj.output_prefix, executable])
+        transitive_runfiles.append(obj.target.default_runfiles.files)
 
-    renderer_argsfile = ctx.actions.declare_file("%s.render-workspace-args" % ctx.label.name)
-    runfiles.append(renderer_argsfile)
-    ctx.actions.write(renderer_argsfile, "\n".join(renderer_args))
-    ctx.actions.write(ctx.outputs.executable, """
-                      #!/bin/bash
-                      set -eu
-                      export PYTHON_RUNFILES=${{PYTHON_RUNFILES:=$0.runfiles}}
-                      export TF_PLUGIN_CACHE_DIR="${{TF_PLUGIN_CACHE_DIR:=$HOME/.terraform.d/plugin-cache}}"
-                      mkdir -p "$TF_PLUGIN_CACHE_DIR"
-
-                      # figure out which command we are running
-                      command="apply"
-                      if [ $# -gt 0 ]; then
-                        command=$1; shift
-                      fi
-
-                      if [ "$command" = "render" ]; then
-                        exec {render_tf} '@{argsfile}' "$@"
-                      fi
-
-                      tfroot="$BUILD_WORKSPACE_DIRECTORY/{package}/.terraform/tfroot"
-                      plugin_dir="$BUILD_WORKSPACE_DIRECTORY/{package}/.terraform/plugins"
-                      # 'rules_k8s' needs to have PYTHON_RUNFILES set
-
-                      case "$command" in
-                      apply|refresh)
-                        # rm -rf "$plugin_dir" # potentially can't remove this else 'destroy' won't work if a provider is removed??
-                        rm -rf "$tfroot"
-                        {render_tf} '@{argsfile}' --output_dir "$tfroot" --plugin_dir "$plugin_dir"
-
-                        cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
-                        terraform init -input=false "$tfroot"
-                        terraform "$command" -backup=- "$tfroot"
-                        ;;
-                      destroy)
-                        cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
-                        terraform destroy -backup=- "$@" "$tfroot"
-                        ;;
-                      state|import)
-                        cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
-                        terraform "$command" "$@"
-                        ;;
-                      *)
-                        rm -rf "$tfroot"
-                        {render_tf} '@{argsfile}' --output_dir "$tfroot" --plugin_dir "$plugin_dir"
-
-                        cd "$BUILD_WORKSPACE_DIRECTORY/{package}"
-                        terraform init -input=false "$tfroot"
-                        terraform "$command" "$@" "$tfroot"
-                        ;;
-                      esac
-                      """.format(
-        package = ctx.label.package,
-        argsfile = renderer_argsfile.short_path,
+    ctx.actions.write(render_tf_argsfile, "\n".join(render_tf_args))
+    ctx.actions.write(render_tf, """#!/bin/sh
+                          exec "{render_tf}" "@{argsfile}" "$@"
+                          """.format(
+        argsfile = render_tf_argsfile.short_path,
         render_tf = ctx.executable._render_tf.short_path,
     ))
 
-    return [DefaultInfo(
-        runfiles = ctx.runfiles(
-            files = runfiles,
-            transitive_files = depset(transitive = transitive_runfiles + [
-                ctx.attr._render_tf.data_runfiles.files,
-            ]),
-        ),
-    ), WorkspaceInfo()]
+    providers = []
+
+    # if this is a workspace, create a launcher
+    if ctx.attr._is_workspace:
+        providers.append(WorkspaceInfo(
+            render_tf = render_tf,
+        ))
+        ctx.actions.expand_template(
+            template = ctx.file._workspace_launcher_template,
+            output = ctx.outputs.executable,
+            substitutions = {
+                "%{package}": ctx.label.package,
+                "%{tf_workspace_files_prefix}": tf_workspace_files_prefix(ctx.attr.name),
+                "%{render_tf}": render_tf.short_path,
+            },
+        )
+    else:
+        providers.append(ModuleInfo(
+            files = file_map,
+            plugins = plugins_depset,
+            k8s_objects = k8s_objects,
+            description = ctx.attr.description,
+            render_tf = render_tf,
+        ))
+
+    return providers + [DefaultInfo(runfiles = ctx.runfiles(
+        files = runfiles,
+        transitive_files = depset(transitive = transitive_runfiles),
+    ))]
+
+_common_attrs = {
+    "srcs": attr.label_list(allow_files = True),
+    "deps": attr.label_list(
+        doc = "Deprecated. Use 'embed' instead ('embed' is functionally identical to 'deps', but seems more semantically correct).",
+        allow_rules = [
+            "_k8s_object",
+            "terraform_module",
+        ],
+    ),
+    "embed": attr.label_list(
+        # we should use "providers" instead, but "k8s_object" does not
+        # currently (2018-9-8) support them
+        doc = "Merge the content of other <terraform_module>s (or <k8s_object>s) into this one.",
+        allow_rules = [
+            "_k8s_object",
+            "terraform_module",
+        ],
+    ),
+    "modules": attr.label_keyed_string_dict(
+        # hack: disabling provider check until doc generator supports 'providers' attribute
+        #   see https://github.com/bazelbuild/skydoc/blob/master/skydoc/stubs/attr.py#L180
+        # providers = [ModuleInfo],
+    ),
+    "description": attr.string(
+        doc = "Optional description of module.",
+        default = "",
+    ),
+    "plugins": attr.label_list(
+        doc = "Custom Terraform plugins that this module requires.",
+        providers = [PluginInfo],
+    ),
+    "_default_kubectl_plugin": attr.label(
+        providers = [PluginInfo],
+        default = "//terraform/plugins/kubectl",
+    ),
+    "_workspace_launcher_template": attr.label(
+        allow_single_file = True,
+        default = "//terraform/internal:workspace_launcher.sh.tpl",
+    ),
+    "_render_tf": attr.label(
+        executable = True,
+        cfg = "host",
+        default = "//terraform/internal:render_tf",
+    ),
+}
+
+terraform_module = rule(
+    implementation = _module_impl,
+    attrs = dict(_common_attrs.items(),
+        # hack: this flag lets us share the same implementation function as 'terraform_module'
+        _is_workspace= attr.bool(default = False)),
+)
 
 terraform_workspace = rule(
-    implementation = _workspace_impl,
+    implementation = _module_impl,
     executable = True,
-    attrs = {
-        "srcs": attr.label_list(allow_files = True),
-        "deps": attr.label_list(
-            # todo: make this consistent with 'terraform_module' deps attribute
-            allow_rules = [
-                "_k8s_object",
-            ],
-        ),
-        "modules": attr.label_keyed_string_dict(
-            # hack: disabling provider check until doc generator supports 'providers' attribute
-            #   see https://github.com/bazelbuild/skydoc/blob/master/skydoc/stubs/attr.py#L180
-            # providers = [ModuleInfo],
-        ),
-        "plugins": attr.label_list(
-            providers = [PluginInfo],
-        ),
-        "_render_tf": attr.label(
-            executable = True,
-            cfg = "host",
-            default = "//terraform/internal:render_tf",
-        ),
-    },
+    attrs = dict(_common_attrs.items(),
+        # hack: this flag lets us share the same implementation function as 'terraform_module'
+        _is_workspace= attr.bool(default = True)),
 )

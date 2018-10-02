@@ -1,6 +1,5 @@
 load("//terraform:providers.bzl", "DistributionDirInfo", "ModuleInfo", "PluginInfo")
 load(":terraform.bzl", "terraform_module")
-load(":util.bzl", "merge_filemap_dict")
 
 def _distribution_dir_impl(ctx):
     """
@@ -11,26 +10,8 @@ def _distribution_dir_impl(ctx):
 
     module = ctx.attr.module[ModuleInfo]
     transitive_runfiles.append(ctx.attr.module.data_runfiles.files)
-    for path, file in module.files.items():
-        renderer_args.extend(["--file", path, file.short_path])
-        runfiles.append(file)
-
-    for o in module.k8s_objects.to_list():
-        renderer_args.extend(["--k8s_object", ".", o])
-
-    if module.plugins:
-        for p in module.plugins.to_list():
-            plugin = p[PluginInfo]
-            for path, file in plugin.files.items():
-                renderer_args.extend(["--plugin_file", path, file.short_path])
-                runfiles.append(file)
-
-    renderer_argsfile = ctx.actions.declare_file("%s.render-args" % ctx.label.name)
-    runfiles.append(renderer_argsfile)
-    ctx.actions.write(renderer_argsfile, "\n".join(renderer_args))
 
     # add tools' runfiles
-    transitive_runfiles.append(ctx.attr._render_tf.data_runfiles.files)
     transitive_runfiles.append(ctx.attr._terraform_docs.data_runfiles.files)
 
     runfiles.append(ctx.file.srcs_list)
@@ -42,8 +23,7 @@ def _distribution_dir_impl(ctx):
             "%{workspace_name}": ctx.workspace_name,
             "%{srcs_list_path}": ctx.file.srcs_list.short_path,
             "%{readme_description}": ctx.attr.description or module.description,
-            "%{render_tf}": ctx.executable._render_tf.short_path,
-            "%{argsfile}": renderer_argsfile.short_path,
+            "%{render_tf}": module.render_tf.short_path,
         },
         output = ctx.outputs.executable,
     )
@@ -80,11 +60,6 @@ terraform_distribution_dir = rule(
             default = Label("@tool_terraform"),
             executable = True,
             cfg = "host",
-        ),
-        "_render_tf": attr.label(
-            executable = True,
-            cfg = "host",
-            default = "//terraform/internal:render_tf",
         ),
     },
     executable = True,

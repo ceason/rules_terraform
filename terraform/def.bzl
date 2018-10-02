@@ -1,6 +1,7 @@
-load("//terraform/internal:terraform.bzl", _terraform_workspace = "terraform_workspace", "terraform_plugin", "terraform_module")
+load("//terraform/internal:terraform.bzl", "terraform_module", "terraform_plugin", _terraform_workspace = "terraform_workspace")
 load("//terraform/internal:test.bzl", "terraform_integration_test")
-load("//terraform/internal:distribution.bzl", "terraform_distribution_publisher", _terraform_distribution_dir = "terraform_distribution_dir", "terraform_module_publisher")
+load("//terraform/internal:distribution.bzl", "terraform_distribution_publisher", "terraform_module_publisher", _terraform_distribution_dir = "terraform_distribution_dir")
+load("//terraform:providers.bzl", "tf_workspace_files_prefix")
 
 def terraform_distribution_dir(name, deps, **kwargs):
     srcs_name = "%s.srcs-list" % name
@@ -41,11 +42,19 @@ def terraform_workspace(name, **kwargs):
     native.genrule(
         name = "%s.destroy" % name,
         outs = ["%s.destroy.sh"],
-        cmd = """
-            echo '#!/bin/sh
-cd $$BUILD_WORKSPACE_DIRECTORY/{package}
-exec terraform destroy -backup=- "$$@" .terraform/tfroot
-' > $@
-        """.format(package = native.package_name()),
+        cmd = """echo '
+            #!/bin/sh
+            set -eu
+            tf_workspace_dir="$$BUILD_WORKSPACE_DIRECTORY/{package}/{tf_workspace_files_prefix}"
+            if [ -e "$$tf_workspace_dir" ]; then
+                cd "$$tf_workspace_dir"
+                exec terraform destroy "$$@" .terraform/tfroot
+            else
+                >&2 echo "Could not find terraform workspace dir, so there is nothing to destroy ($$tf_workspace_dir)"
+            fi
+            ' > $@""".format(
+            package = native.package_name(),
+            tf_workspace_files_prefix = tf_workspace_files_prefix(name),
+        ),
         executable = True,
     )
