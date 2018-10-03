@@ -1,6 +1,16 @@
-load("//terraform/internal:terraform.bzl", "terraform_module", "terraform_plugin", _terraform_workspace = "terraform_workspace")
+load(
+    "//terraform/internal:terraform.bzl",
+    "terraform_plugin",
+    _terraform_module = "terraform_module",
+    _terraform_workspace = "terraform_workspace",
+)
 load("//terraform/internal:test.bzl", "terraform_integration_test")
-load("//terraform/internal:distribution.bzl", "terraform_distribution_publisher", "terraform_module_publisher", _terraform_distribution_dir = "terraform_distribution_dir")
+load(
+    "//terraform/internal:distribution.bzl",
+    "terraform_distribution_publisher",
+    "terraform_module_publisher",
+    _terraform_distribution_dir = "terraform_distribution_dir",
+)
 load("//terraform:providers.bzl", "tf_workspace_files_prefix")
 
 def terraform_distribution_dir(name, deps, **kwargs):
@@ -31,9 +41,33 @@ def terraform_distribution_dir(name, deps, **kwargs):
         **kwargs
     )
 
-def terraform_workspace(name, **kwargs):
+def _flip_modules_attr(modules):
+    """
+    Translate modules attr from a 'name=>label' dict to 'label=>name'
+    """
+    flipped = {}
+    for name, label in modules.items():
+        if not (label.startswith("@") or label.startswith("//") or label.startswith(":")):
+            fail("Modules are now specified as 'name=>label'", attr="modules")
+        # append package path & workspace name as necessary
+        abs_label = "//" + native.package_name() + label if label.startswith(":") else label
+        abs_label = "@" + abs_label if abs_label.startswith("//") else abs_label
+        if abs_label in flipped:
+            fail("Modules may only be specified once (%s)" % label, attr = "modules")
+        flipped[abs_label] = name
+    return flipped
+
+def terraform_module(name, modules = {}, **kwargs):
+    _terraform_module(
+        name = name,
+        modules = _flip_modules_attr(modules),
+        **kwargs
+    )
+
+def terraform_workspace(name, modules = {}, **kwargs):
     _terraform_workspace(
         name = name,
+        modules = _flip_modules_attr(modules),
         **kwargs
     )
 

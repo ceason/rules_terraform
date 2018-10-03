@@ -9,7 +9,7 @@ resource random_string password {
 resource kubernetes_secret super_secret_string {
   metadata {
     name      = "super-secret-string"
-    namespace = "${var.namespace}"
+    namespace = "${data.kubectl_namespace.current.id}"
   }
 
   data {

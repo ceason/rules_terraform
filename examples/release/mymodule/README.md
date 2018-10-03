@@ -7,7 +7,7 @@ This is an example terraform module, built with bazel!
 
 | Name | Description | Type | Default | Required |
 |------|-------------|:----:|:-----:|:-----:|
-| namespace | The Kubernetes namespace. | string | - | yes |
+| custom_server_message | The server will respond to all HTTP requests with this message | string | `Hello, world!` | no |
 
 
 # Latest Changes

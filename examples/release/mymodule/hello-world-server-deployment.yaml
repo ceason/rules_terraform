@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world-server
+  template:
+    metadata:
+      labels:
+        app: hello-world-server
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: hello-world-server
+            optional: false
+        image: index.docker.io/netchris/hello-world-server@sha256:5259802a3b37e0c4c99b89c74b671f2435d49c8736aba00390e45eaef01bb103
+        name: server
+        ports:
+        - containerPort: 8080
+          name: http-server
+        terminationMessagePolicy: FallbackToLogsOnError

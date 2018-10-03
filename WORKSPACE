@@ -21,6 +21,13 @@ load("@io_bazel_rules_docker//container:container.bzl", "repositories")
 
 repositories()
 
+load(
+    "@io_bazel_rules_docker//python:image.bzl",
+    _py_image_repos = "repositories",
+)
+
+_py_image_repos()
+
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
 
 k8s_repositories()

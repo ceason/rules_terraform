@@ -1,8 +1,8 @@
 
-resource kubectl_generic_object test-admin_serviceaccount {
-    yaml = "${file("${path.module}/test-admin-serviceaccount.yaml")}"
+resource kubectl_generic_object hello-world-server_service {
+    yaml = "${file("${path.module}/hello-world-server-service.yaml")}"
 }
 
-resource kubectl_generic_object some-user_serviceaccount {
-    yaml = "${file("${path.module}/some-user-serviceaccount.yaml")}"
+resource kubectl_generic_object hello-world-server_deployment {
+    yaml = "${file("${path.module}/hello-world-server-deployment.yaml")}"
 }

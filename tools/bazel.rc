@@ -1,5 +1,6 @@
 build --workspace_status_command=./tools/print-workspace-status.sh --stamp=yes
 test --test_output=errors
+test --test_verbose_timeout_warnings
 
 # pass through provider-relevant vars for terraform_integration_tests
 test --test_env=KUBECONFIG

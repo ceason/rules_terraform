@@ -1,9 +1,7 @@
-variable namespace {
-  description = "The Kubernetes namespace."
-}
+
 
 resource kubectl_generic_object test_admin_clusterrolebinding {
-  # language=yaml
+  // language=yaml
   yaml = <<EOF
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -14,6 +12,6 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: test-admin
-  namespace: ${var.namespace}
+  namespace: ${data.kubectl_namespace.current.id}
 EOF
 }
