@@ -1,7 +1,6 @@
-load("//terraform:def.bzl", "terraform_distribution_dir", "terraform_integration_test", "terraform_module", "terraform_workspace")
+load("//terraform:def.bzl", "terraform_module")
 load("@io_bazel_rules_docker//python:image.bzl", "py_image")
 load("@io_bazel_rules_k8s//k8s:object.bzl", "k8s_object")
-#load("@k8s_object//:defaults.bzl", "k8s_object")
 
 py_image(
     name = "py_image",

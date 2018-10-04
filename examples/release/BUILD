@@ -1,4 +1,4 @@
-load("//terraform:def.bzl", "terraform_distribution_dir", "terraform_distribution_publisher", "terraform_module_publisher")
+load("//terraform:def.bzl", "terraform_module_publisher")
 
 terraform_module_publisher(
     name = "publish",
