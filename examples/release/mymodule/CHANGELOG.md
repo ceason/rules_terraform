@@ -1,1 +1,2 @@
+- _Wed, 3 Oct 2018 14:47:25 -0400_ `568982a` Reverse terraform_{workspace,module} 'modules' attribute
 - _Sun, 16 Sep 2018 09:35:32 -0400_ `d08897c` initial commit
