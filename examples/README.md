@@ -87,7 +87,7 @@ terraform_integration_test(
 
 ```
 
-### `test/BUILD`
+### `release/BUILD`
 ```python
 load("//terraform:def.bzl", "terraform_module_publisher")
 
