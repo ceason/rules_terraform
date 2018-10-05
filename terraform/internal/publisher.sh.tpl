@@ -114,12 +114,23 @@ if [ -n "${REMOTE:=""}" ]; then
 fi
 
 >&2 echo "$UPDATE_DIR_MESSAGE"
+returncodes=$(mktemp -d)
+ITS_A_TRAP+=("rm -rf $returncodes")
 for item in "${distdir_scripts[@]}"; do
 	name=$(cut -d'=' -f1 <<< "$item")
 	script=$(cut -d'=' -f2 <<< "$item")
-    $script --tgt-dir=$OUTPUT_ROOT/$name &
+    ( set +e
+      "$script" --tgt-dir="$OUTPUT_ROOT/$name"
+      echo -n "$?" > "$returncodes/$BASHPID"
+    ) &
 done
 wait
+for file in "$returncodes"/*; do
+	rc=$(cat "$file")
+    if [ "$rc" -ne 0 ]; then
+    	exit $rc
+    fi
+done
 
 # Prompt user to publish changes if there are any
 cd "$OUTPUT_ROOT"

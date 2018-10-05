@@ -89,7 +89,10 @@ def main(args):
 	k8s_tf_files = {}
 	for item in args.k8s_object:
 		prefix, resolver = item
-		stdout = subprocess.check_output([resolver])
+		try:
+			stdout = subprocess.check_output([resolver])
+		except subprocess.CalledProcessError as e:
+			exit(e.returncode)
 		for k8s_object in yaml.load_all(stdout):
 			# strip 'namespace' if it's present
 			k8s_object['metadata'].pop('namespace', None)
