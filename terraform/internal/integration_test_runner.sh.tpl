@@ -22,7 +22,7 @@ cleanup(){
 trap cleanup EXIT
 
 render_tf="%{render_tf}"
-stern="%{stern}"
+stern="$PWD/%{stern}"
 SRCTEST="%{srctest}"
 tf_workspace_files_prefix="%{tf_workspace_files_prefix}"
 mkdir -p "$tf_workspace_files_prefix"
@@ -49,20 +49,27 @@ chmod 700 $(dirname "$tfstate")
 pushd "$tf_workspace_files_prefix" > /dev/null
 timeout 20 terraform init -input=false "$tfroot"
 timeout 20 terraform validate "$tfroot"
+# if the kubectl provider is used then create a namespace for the test
+if [ "$(find .terraform/plugins/ -type f \( -name 'terraform-provider-kubernetes_*' -o -name 'terraform-provider-kubectl_*' \)|wc -l)" -gt 0 ]; then
+	kubectl config view --merge --raw --flatten > "$TEST_TMPDIR/kubeconfig.yaml"
+	ITS_A_TRAP+=("rm -rf '$TEST_TMPDIR/kubeconfig.yaml'")
+	kube_context=$(kubectl config current-context)
+	export KUBECONFIG="$TEST_TMPDIR/kubeconfig.yaml"
+	test_namespace=$(mktemp --dry-run test-XXXXXXXXX|tr '[:upper:]' '[:lower:]')
+	kubectl create namespace "$test_namespace"
+	ITS_A_TRAP+=("kubectl delete namespace $test_namespace --wait=false")
+	kubectl config set-context $kube_context --namespace=$test_namespace
+	# tail stuff with stern in the background
+	"$stern" '.*' --tail 1 --color always &
+fi
 timeout 20 terraform plan -out="$tfplan" -input=false "$tfroot"
 popd > /dev/null
 
-# tail stuff with stern in the background
-$stern '.*' --tail 1 --color always &
-
 # apply the terraform
-ITS_A_TRAP+=("cd '$tf_workspace_files_prefix' && terraform destroy -state='$tfstate' -auto-approve -refresh=false")
+ITS_A_TRAP+=("cd '$PWD/$tf_workspace_files_prefix' && terraform destroy -state='$tfstate' -auto-approve -refresh=false")
 pushd "$tf_workspace_files_prefix" > /dev/null
 terraform apply -state-out="$tfstate" -auto-approve "$tfplan"
 popd > /dev/null
 
 # run the test & await its completion
-#echo "pwd:$PWD"
-# cat "$SRCTEST"
-#JAVA_STUB_DEBUG='set -x' "$SRCTEST" "$@"
 "$SRCTEST" "$@"
