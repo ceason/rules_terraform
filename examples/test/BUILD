@@ -4,9 +4,12 @@ terraform_workspace(
     name = "test-workspace",
     srcs = ["test_ws.tf"],
     modules = {
-        "module": "//examples/src:hello-world",
+        "module": "//examples/src:hello-world_k8s",
     },
 )
+
+
+
 
 sh_test(
     name = "e2e_test",
@@ -19,7 +22,7 @@ sh_test(
 terraform_integration_test(
     name = "e2e_integration_test",
     timeout = "short",
-    flaky = 1,
+    #flaky = 1,
     srctest = ":e2e_test",
     # tags = ["manual"],
     terraform_workspace = ":test-workspace",

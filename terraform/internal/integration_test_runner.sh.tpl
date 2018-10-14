@@ -4,6 +4,8 @@ set -euo pipefail
 err_report() { echo "errexit on line $(caller)" >&2; }
 trap err_report ERR
 
+export RUNFILES=${RUNFILES_DIR}
+
 # register cleanup traps here, then execute them on EXIT!
 ITS_A_TRAP=()
 cleanup(){

@@ -1,5 +1,6 @@
 load("//terraform:providers.bzl", "DistributionDirInfo", "ModuleInfo", "PluginInfo")
 load(":terraform.bzl", "terraform_module")
+load("//terraform/internal:terraform_lib.bzl", "create_terraform_renderer", "runfiles_path", "tf_renderer_attrs")
 
 def _distribution_dir_impl(ctx):
     """
@@ -16,6 +17,10 @@ def _distribution_dir_impl(ctx):
 
     runfiles.append(ctx.file.srcs_list)
 
+    # bundle the renderer with args for the content of this tf module
+    render_tf = ctx.actions.declare_file("%s.render-tf" % ctx.attr.name)
+    transitive_runfiles.append(create_terraform_renderer(ctx, render_tf, module))
+
     # expand the runner template
     ctx.actions.expand_template(
         template = ctx.file._template,
@@ -23,7 +28,7 @@ def _distribution_dir_impl(ctx):
             "%{workspace_name}": ctx.workspace_name,
             "%{srcs_list_path}": ctx.file.srcs_list.short_path,
             "%{readme_description}": ctx.attr.description or module.description,
-            "%{render_tf}": module.render_tf.short_path,
+            "%{render_tf}": render_tf.short_path,
         },
         output = ctx.outputs.executable,
     )
@@ -39,29 +44,30 @@ def _distribution_dir_impl(ctx):
 
 terraform_distribution_dir = rule(
     implementation = _distribution_dir_impl,
-    attrs = {
-        "srcs_list": attr.label(mandatory = True, single_file = True),
-        "description": attr.string(default = ""),
-        "module": attr.label(
+    attrs = dict(
+        tf_renderer_attrs.items(),
+        srcs_list = attr.label(mandatory = True, single_file = True),
+        description = attr.string(default = ""),
+        module = attr.label(
             mandatory = True,
             providers = [ModuleInfo],
         ),
-        "_template": attr.label(
+        _template = attr.label(
             default = Label("//terraform/internal:distribution_dir.sh.tpl"),
             single_file = True,
             allow_files = True,
         ),
-        "_terraform_docs": attr.label(
+        _terraform_docs = attr.label(
             default = Label("@tool_terraform_docs"),
             executable = True,
             cfg = "host",
         ),
-        "_terraform": attr.label(
+        _terraform = attr.label(
             default = Label("@tool_terraform"),
             executable = True,
             cfg = "host",
         ),
-    },
+    ),
     executable = True,
 )
 

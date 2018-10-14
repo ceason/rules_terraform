@@ -10,6 +10,6 @@ terraform_module_publisher(
         "//examples/test:e2e_integration_test",
     ],
     published_modules = {
-        "mymodule": "//examples/src:hello-world",
+        "mymodule": "//examples/src:hello-world_k8s",
     },
 )

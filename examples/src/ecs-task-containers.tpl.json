@@ -1,0 +1,17 @@
+[
+  {
+    "name": "server",
+    "image": "hello-world-server:dev",
+    "repositoryCredentials": {
+      "credentialsParameter": "${ecs_repository_credentials_parameter}"
+    },
+    "memory": 200,
+    "cpu": 10,
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 8080
+      }
+    ]
+  }
+]

@@ -15,6 +15,8 @@ tfroot="$tf_workspace_dir/.terraform/tfroot"
 plugin_dir="$tf_workspace_dir/.terraform/plugins"
 render_tf="%{render_tf}"
 
+export RUNFILES=${RUNFILES-$(cd "$0.runfiles" && pwd)}
+
 _terraform_quiet(){
 	local output=$(mktemp)
 	chmod 600 $output

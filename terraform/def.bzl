@@ -51,7 +51,7 @@ def _flip_modules_attr(modules):
             fail("Modules are now specified as 'name=>label'", attr="modules")
         # append package path & workspace name as necessary
         abs_label = "//" + native.package_name() + label if label.startswith(":") else label
-        abs_label = "@" + abs_label if abs_label.startswith("//") else abs_label
+        abs_label = native.repository_name() + abs_label if abs_label.startswith("//") else abs_label
         if abs_label in flipped:
             fail("Modules may only be specified once (%s)" % label, attr = "modules")
         flipped[abs_label] = name

@@ -1,5 +1,8 @@
 # export the bzl files for the doc generator :-\
-exports_files(glob(["*.tpl", "*.bzl"]))
+exports_files(glob([
+    "*.tpl",
+    "*.bzl",
+]))
 
 py_binary(
     name = "render_tf",
@@ -7,4 +10,25 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+py_binary(
+    name = "stamper",
+    srcs = ["stamper.py"],
+    visibility = ["//visibility:public"],
+)
 
+py_binary(
+    name = "image_resolver",
+    srcs = ["image_resolver.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@containerregistry",
+        "@yaml",
+    ],
+)
+
+py_binary(
+    name = "k8s",
+    srcs = ["k8s.py"],
+    visibility = ["//visibility:public"],
+    deps = ["@yaml"],
+)
