@@ -9,15 +9,6 @@ py_image(
     main = "server.py",
 )
 
-#k8s_object(
-#    name = "k8s-deployment",
-#    image_chroot = "{STABLE_IMAGE_CHROOT}",
-#    images = {
-#        "hello-world-server:dev": ":py_image",
-#    },
-#    template = "server.yaml",
-#)
-
 terraform_k8s_objects(
     name = "k8s-deployment",
     srcs = ["server.yaml"],
@@ -25,15 +16,6 @@ terraform_k8s_objects(
     images = {
         "hello-world-server:dev": ":py_image",
     },
-)
-
-k8s_object(
-    name = "k8s-ecs",
-    image_chroot = "{STABLE_IMAGE_CHROOT}",
-    images = {
-        "hello-world-server:dev": ":py_image",
-    },
-    template = "ecs-task-containers.tpl.json",
 )
 
 image_resolver(
@@ -52,6 +34,7 @@ terraform_module(
         "k8s.tf",
         "main.tf",
     ],
+    description = "A hello-world service that is designed to run on Kubernetes",
     embed = [":k8s-deployment"],
     visibility = ["//visibility:public"],
 )
@@ -62,13 +45,7 @@ terraform_module(
         "ecs.tf",
         "main.tf",
     ],
+    description = "A hello-world service that is designed to run on ECS",
     embed = [":ecs-task-containers"],
     visibility = ["//visibility:public"],
-)
-
-terraform_workspace(
-    name = "wtf",
-    #srcs = [],
-    embed = [":hello-world_ecs"],
-    modules = {"blah": ":hello-world_ecs"},
 )
