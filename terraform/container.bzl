@@ -1,8 +1,8 @@
 load("//terraform:providers.bzl", "ModuleInfo")
 load("//terraform/internal:image_resolver_lib.bzl", "create_image_resolver", "image_resolver_attrs", "runfiles_path")
-load("//terraform/internal:k8s.bzl", _terraform_kubectl_objects = "terraform_kubectl_objects")
+load("//terraform/internal:k8s.bzl", _terraform_k8s_manifest = "terraform_k8s_manifest")
 
-terraform_k8s_objects = _terraform_kubectl_objects
+terraform_k8s_manifest = _terraform_k8s_manifest
 
 def _image_resolver_impl(ctx):
     runfiles = []

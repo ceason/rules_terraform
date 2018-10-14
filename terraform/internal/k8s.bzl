@@ -2,7 +2,7 @@ load("//terraform:providers.bzl", "ModuleInfo")
 load("//terraform/internal:image_resolver_lib.bzl", "create_image_resolver", "image_resolver_attrs", "runfiles_path")
 load("//terraform/internal:terraform_lib.bzl", "create_launcher")
 
-def _terraform_kubectl_objects_impl(ctx):
+def _terraform_k8s_manifest_impl(ctx):
     runfiles = []
     transitive_runfiles = []
     module_info = ModuleInfo(
@@ -58,8 +58,8 @@ def _terraform_kubectl_objects_impl(ctx):
         )),
     ]
 
-_terraform_kubectl_objects = rule(
-    implementation = _terraform_kubectl_objects_impl,
+_terraform_k8s_manifest = rule(
+    implementation = _terraform_k8s_manifest_impl,
     attrs = image_resolver_attrs + {
         "srcs": attr.label_list(allow_files = [".yaml", ".json", ".yml"]),
         "_kubectl_plugin": attr.label(default = "//terraform/plugins/kubectl"),
@@ -72,14 +72,14 @@ _terraform_kubectl_objects = rule(
     executable = True,
 )
 
-def terraform_kubectl_objects(name, images = {}, **kwargs):
+def terraform_k8s_manifest(name, images = {}, **kwargs):
     """
     """
     for reserved in ["image_targets", "image_target_strings"]:
         if reserved in kwargs:
             fail("reserved for internal use by docker_bundle macro", attr = reserved)
     deduped_images = {s: None for s in images.values()}.keys()
-    _terraform_kubectl_objects(
+    _terraform_k8s_manifest(
         name = name,
         images = images,
         image_targets = deduped_images,
