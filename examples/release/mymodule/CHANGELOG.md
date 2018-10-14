@@ -1,2 +1,3 @@
+- _Sun, 14 Oct 2018 17:54:30 -0400_ `7a4f4f5` Implement 'terraform_k8s_objects' & 'image_resolver'
+- _Mon, 8 Oct 2018 20:23:12 -0400_ `f805cd7` Make 'kubectl_' resources use a generated/isolated test namespace by default
 - _Wed, 3 Oct 2018 14:47:25 -0400_ `568982a` Reverse terraform_{workspace,module} 'modules' attribute
-- _Sun, 16 Sep 2018 09:35:32 -0400_ `d08897c` initial commit

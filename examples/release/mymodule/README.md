@@ -1,4 +1,4 @@
-This is an example terraform module, built with bazel!
+A hello-world service that is designed to run on Kubernetes
 
 # Terraform
 

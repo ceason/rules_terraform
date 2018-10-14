@@ -17,7 +17,7 @@ spec:
         - configMapRef:
             name: hello-world-server
             optional: false
-        image: index.docker.io/netchris/hello-world-server@sha256:5259802a3b37e0c4c99b89c74b671f2435d49c8736aba00390e45eaef01bb103
+        image: index.docker.io/netchris/hello-world-server@sha256:fa0a82e09011a537991376cd96b6caffc095deda44274d036a889e36124b738c
         name: server
         ports:
         - containerPort: 8080
