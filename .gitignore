@@ -1,5 +1,4 @@
 bazel-*
 .ijwb/
-.bazelrc
 .rules_terraform/
 .bazelrc-local
