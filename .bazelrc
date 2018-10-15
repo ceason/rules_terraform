@@ -1,0 +1,21 @@
+# Upload images locally by default, but remotely when publishing
+build       --define IMAGE_CHROOT=registry.kube-system.svc.cluster.local:80
+run:publish --define IMAGE_CHROOT=index.docker.io/netchris
+
+build --workspace_status_command=./tools/print-workspace-status.sh --stamp=yes
+test --test_output=errors
+test --test_verbose_timeout_warnings
+
+# pass through provider-relevant vars for terraform_integration_tests
+test --test_env=KUBECONFIG
+test --test_env=AWS_PROFILE
+test --test_env=AWS_DEFAULT_REGION
+test --test_env=AWS_ACCESS_KEY_ID
+test --test_env=AWS_SECRET_ACCESS_KEY
+
+# necessary for `aws-okta` authentication
+test --test_env=AWS_OKTA_BACKEND
+test --test_env=DBUS_SESSION_BUS_ADDRESS
+
+# allow users to set (or override) flags in this '.gitignore'd file
+import %workspace%/.bazelrc-local
