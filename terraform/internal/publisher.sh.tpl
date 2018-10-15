@@ -30,6 +30,12 @@ DISTRIB_DIR_TARGETS=(%{distrib_dir_targets})
 REMOTE="%{remote}"
 REMOTE_PATH="%{remote_path}"
 REMOTE_BRANCH="%{remote_branch}"
+BAZELRC_CONFIG="%{bazelrc_config}"
+
+bazelcfg=""
+if [ -n "$BAZELRC_CONFIG" ]; then
+	bazelcfg="--config=$BAZELRC_CONFIG"
+fi
 
 cd "$BUILD_WORKSPACE_DIRECTORY"
 
@@ -83,7 +89,7 @@ for item in "${DISTRIB_DIR_TARGETS[@]}"; do
 	distdir_scripts+=("${name}=${script}")
 	ITS_A_TRAP+=("rm -rf '$script'")
 	cmdout=$(mktemp)
-	if env "${RELEASE_VARS[@]}" bazel run --script_path=$script "$label" > "$cmdout" 2>&1; then
+	if env "${RELEASE_VARS[@]}" bazel run "$bazelcfg" --script_path=$script "$label" > "$cmdout" 2>&1; then
 		rm -rf "$cmdout"
 	else
 		rc=$?

@@ -102,6 +102,7 @@ def _distribution_publisher_impl(ctx):
             "%{package}": ctx.label.package,
             "%{remote}": ctx.attr.remote or "",
             "%{remote_path}": ctx.attr.remote_path or "",
+            "%{bazelrc_config}": ctx.attr.bazelrc_config or "",
             "%{remote_branch}": ctx.attr.remote_branch or "master",
         },
         output = ctx.outputs.executable,
@@ -121,6 +122,7 @@ terraform_distribution_publisher = rule(
     attrs = {
         "remote": attr.string(doc = "Git remote URI. Publish to this repo instead of a local directory."),
         "remote_path": attr.string(),
+        "bazelrc_config": attr.string(default = ""),
         "remote_branch": attr.string(default = "master"),
         "deps": attr.label_list(
             mandatory = True,

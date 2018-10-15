@@ -12,7 +12,7 @@ py_image(
 terraform_k8s_manifest(
     name = "k8s-deployment",
     srcs = ["server.yaml"],
-    image_chroot = "{STABLE_IMAGE_CHROOT}",
+    image_chroot = "$(IMAGE_CHROOT)",
     images = {
         "hello-world-server:dev": ":py_image",
     },

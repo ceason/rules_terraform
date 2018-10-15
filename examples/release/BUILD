@@ -2,9 +2,7 @@ load("//terraform:def.bzl", "terraform_module_publisher")
 
 terraform_module_publisher(
     name = "publish",
-    env = {
-        "IMAGE_CHROOT": "index.docker.io/netchris",
-    },
+    bazelrc_config = "publish",
     prepublish_tests = [
         "//...",
         "//examples/test:e2e_integration_test",

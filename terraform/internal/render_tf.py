@@ -92,8 +92,6 @@ def main(args):
     # - run generator in the tmpdir
     # - 'put_file' each generated file back to the output dir
     # - remove the tmpdir
-    # print(args.file_generator)
-    # exit(1)
     for item in args.file_generator:
         prefix, executable = item
         tmpdir = tempfile.mkdtemp()
@@ -106,8 +104,6 @@ def main(args):
             exit(e.returncode)
         # walk the dir and 'put_file' each file
         for dirpath, dirnames, files in os.walk(tmpdir):
-            print(tmpdir)
-            print(dirpath)
             if dirpath == tmpdir:
                 relative_dirpath = ""
             elif dirpath.startswith(tmpdir + os.sep):
