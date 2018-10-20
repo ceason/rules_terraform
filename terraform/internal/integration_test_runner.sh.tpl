@@ -27,6 +27,13 @@ render_tf="%{render_tf}"
 stern="$PWD/%{stern}"
 SRCTEST="%{srctest}"
 tf_workspace_files_prefix="%{tf_workspace_files_prefix}"
+PRETEST_PUBLISHERS=(%{pretest_publishers})
+
+# run pretest publishers (eg docker image publisher)
+for publisher in "${PRETEST_PUBLISHERS[@]}"; do
+	"$publisher"
+done
+
 mkdir -p "$tf_workspace_files_prefix"
 
 : ${TMPDIR:=/tmp}

@@ -1,6 +1,7 @@
 load("//terraform:providers.bzl", "DistributionDirInfo", "ModuleInfo", "PluginInfo")
 load(":terraform.bzl", "terraform_module")
 load("//terraform/internal:terraform_lib.bzl", "create_terraform_renderer", "runfiles_path", "tf_renderer_attrs")
+load("//terraform/internal:image_embedder_lib.bzl", "create_image_publisher", "image_publisher_aspect", "image_publisher_attrs")
 
 def _distribution_dir_impl(ctx):
     """
@@ -21,6 +22,14 @@ def _distribution_dir_impl(ctx):
     render_tf = ctx.actions.declare_file("%s.render-tf" % ctx.attr.name)
     transitive_runfiles.append(create_terraform_renderer(ctx, render_tf, module))
 
+    # publish container images
+    image_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
+    transitive_runfiles.append(create_image_publisher(
+        ctx,
+        image_publisher,
+        [ctx.attr.module],
+    ))
+
     # expand the runner template
     ctx.actions.expand_template(
         template = ctx.file._template,
@@ -29,6 +38,7 @@ def _distribution_dir_impl(ctx):
             "%{srcs_list_path}": ctx.file.srcs_list.short_path,
             "%{readme_description}": ctx.attr.description or module.description,
             "%{render_tf}": render_tf.short_path,
+            "%{publish_images}": image_publisher.short_path,
         },
         output = ctx.outputs.executable,
     )
@@ -45,12 +55,13 @@ def _distribution_dir_impl(ctx):
 terraform_distribution_dir = rule(
     implementation = _distribution_dir_impl,
     attrs = dict(
-        tf_renderer_attrs.items(),
+        image_publisher_attrs.items() + tf_renderer_attrs.items(),
         srcs_list = attr.label(mandatory = True, single_file = True),
         description = attr.string(default = ""),
         module = attr.label(
             mandatory = True,
             providers = [ModuleInfo],
+            aspects = [image_publisher_aspect],
         ),
         _template = attr.label(
             default = Label("//terraform/internal:distribution_dir.sh.tpl"),

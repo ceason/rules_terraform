@@ -8,9 +8,6 @@ terraform_workspace(
     },
 )
 
-
-
-
 sh_test(
     name = "e2e_test",
     srcs = ["e2e.sh"],

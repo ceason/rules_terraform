@@ -1,8 +1,6 @@
 from __future__ import print_function
 
 import argparse
-import os
-import subprocess
 
 import yaml
 
@@ -12,9 +10,10 @@ subparsers = parser.add_subparsers(dest="command")
 k8s_parser = subparsers.add_parser(
     'write-k8s',
     help="Splits k8s objects into individual files, writing them to the current directory")
+
 k8s_parser.add_argument(
-    '--resolver', action='store',
-    help='Executable which prints a yaml stream of k8s objects to stdout.')
+    '--input_file', action='store',
+    help='File containing yaml stream of k8s objects.')
 
 tf_parser = subparsers.add_parser(
     'write-tf',
@@ -73,16 +72,11 @@ def write_tf(args):
 
 
 def write_k8s(args):
-    resolver = args.resolver.replace('${RUNFILES}', os.environ['RUNFILES'])
-    try:
-        stdout = subprocess.check_output([resolver])
-    except subprocess.CalledProcessError as e:
-        exit(e.returncode)
-
-    for item in yaml.load_all(stdout):
-        obj = KubectlGenericObject(item)
-        with open(obj.filename, "w") as f:
-            f.write(obj.content())
+    with open(args.input_file, "r") as in_file:
+        for item in yaml.load_all(in_file):
+            obj = KubectlGenericObject(item)
+            with open(obj.filename, "w") as out_file:
+                out_file.write(obj.content())
 
 
 def main():

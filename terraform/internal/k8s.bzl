@@ -1,8 +1,9 @@
 load("//terraform:providers.bzl", "ModuleInfo")
-load("//terraform/internal:image_resolver_lib.bzl", "create_image_resolver", "image_resolver_attrs", "runfiles_path")
+load("//terraform/internal:image_embedder_lib.bzl", "embed_images", "image_embedder_attrs", "runfiles_path")
 load("//terraform/internal:terraform_lib.bzl", "create_launcher")
 
 def _terraform_k8s_manifest_impl(ctx):
+    providers = []
     runfiles = []
     transitive_runfiles = []
     module_info = ModuleInfo(
@@ -10,22 +11,28 @@ def _terraform_k8s_manifest_impl(ctx):
         file_generators = [],
         plugins = depset(direct = [ctx.attr._kubectl_plugin]),
     )
+    providers.append(module_info)
 
     # create a file generator that resolves image references
     # & writes objects to individual files
-    resolver_runfiles = create_image_resolver(
+    embedded = ctx.actions.declare_file("%s.embedded-manifests.yaml" % ctx.attr.name)
+    runfiles.append(embedded)
+    providers.append(embed_images(
         ctx,
-        ctx.outputs.executable,
+        embedded,
         input_files = ctx.files.srcs,
         output_format = "yaml",
-    )
-    transitive_runfiles.append(resolver_runfiles)
+    ))
     file_generator = ctx.actions.declare_file("%s.generate-manifests" % ctx.attr.name)
+    ctx.actions.write(ctx.outputs.executable, """#!/bin/bash
+                      set -euo pipefail
+                      cat "%s"
+                      """ % embedded.short_path)
     create_launcher(ctx, file_generator, [
         ctx.executable._k8s_tool,
         "write-k8s",
-        "--resolver",
-        ctx.outputs.executable,
+        "--input_file",
+        embedded,
     ])
     transitive_runfiles.append(ctx.attr._k8s_tool.default_runfiles.files)
     module_info.file_generators.append(struct(
@@ -50,17 +57,19 @@ def _terraform_k8s_manifest_impl(ctx):
     )
     module_info.files[generated_tf.basename] = generated_tf
 
-    return [
-        module_info,
-        DefaultInfo(runfiles = ctx.runfiles(
-            files = runfiles,
-            transitive_files = depset(transitive = transitive_runfiles),
-        )),
+    return providers + [
+        DefaultInfo(
+            files = depset(direct = [embedded]),
+            runfiles = ctx.runfiles(
+                files = runfiles,
+                transitive_files = depset(transitive = transitive_runfiles),
+            ),
+        ),
     ]
 
 _terraform_k8s_manifest = rule(
     implementation = _terraform_k8s_manifest_impl,
-    attrs = image_resolver_attrs + {
+    attrs = image_embedder_attrs + {
         "srcs": attr.label_list(allow_files = [".yaml", ".json", ".yml"]),
         "_kubectl_plugin": attr.label(default = "//terraform/plugins/kubectl"),
         "_k8s_tool": attr.label(

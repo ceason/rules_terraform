@@ -1,7 +1,6 @@
 load("//terraform:def.bzl", "terraform_module", "terraform_workspace")
-load("//terraform:container.bzl", "image_resolver", "terraform_k8s_manifest")
+load("//terraform:container.bzl", "image_embedder", "terraform_k8s_manifest")
 load("@io_bazel_rules_docker//python:image.bzl", "py_image")
-load("@io_bazel_rules_k8s//k8s:object.bzl", "k8s_object")
 
 py_image(
     name = "py_image",
@@ -18,10 +17,10 @@ terraform_k8s_manifest(
     },
 )
 
-image_resolver(
+image_embedder(
     name = "ecs-task-containers",
     src = "ecs-task-containers.tpl.json",
-    image_chroot = "{STABLE_IMAGE_CHROOT}",
+    image_chroot = "$(IMAGE_CHROOT)",
     images = {
         "hello-world-server:dev": ":py_image",
     },

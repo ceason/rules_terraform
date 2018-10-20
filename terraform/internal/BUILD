@@ -17,8 +17,8 @@ py_binary(
 )
 
 py_binary(
-    name = "image_resolver",
-    srcs = ["image_resolver.py"],
+    name = "image_embedder",
+    srcs = ["image_embedder.py"],
     visibility = ["//visibility:public"],
     deps = [
         "@containerregistry",

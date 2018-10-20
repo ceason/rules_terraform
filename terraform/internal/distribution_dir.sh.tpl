@@ -12,6 +12,7 @@ SRCS_LIST_PATH=$RUNFILES/$WORKSPACE_NAME/%{srcs_list_path}
 README_DESCRIPTION="%{readme_description}"
 terraform_docs="$RUNFILES/tool_terraform_docs/binary"
 render_tf="%{render_tf}"
+publish_images="%{publish_images}"
 
 for arg in "$@"; do case $arg in
 	--tgt-dir=*)
@@ -106,6 +107,8 @@ main(){
 	$render_tf --output_dir "$STAGING_DIR" --plugin_dir "$STAGING_DIR/terraform.d/plugins"
 	generate-changelog "$STAGING_DIR"
 	generate-readme "$STAGING_DIR"
+
+	"$publish_images"
 
 	# replace the target dir with the successfully populated staging dir
 	mkdir -p "$ARG_TGT_DIR"
