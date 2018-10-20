@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(
     description='Embed & publish container images')
 
 parser.add_argument(
-    '--image_spec', action='append',
+    '--image_spec', action='append', default=[],
     type=lambda json_str: json.loads(json_str, object_hook=lambda d: namedtuple('X', d.keys())(*d.values())),
     help='JSON image spec')
 
