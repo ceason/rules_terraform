@@ -52,6 +52,41 @@ generate-changelog(){
 	# change dir to the repo root
 	pushd $(cd "$BUILD_WORKSPACE_DIRECTORY" && git rev-parse --show-toplevel) > /dev/null
 
+	# get the remote's URL (in order of precedence)
+	local remote_url
+	if remote_url=$(git remote get-url upstream 2>/dev/null); then
+		:
+	elif remote_url=$(git remote get-url origin 2>/dev/null); then
+		:
+	else
+		remote_url=$(git remote get-url $(git remote))
+	fi
+
+	# "normalize" the remote URL for easier parsing of its components
+	case "$remote_url" in
+	# https://github.com/ceason/rules_terraform.git
+	https://*) remote_url=${remote_url#https://*} ;;
+	http://*)  remote_url=${remote_url#http://*} ;;
+
+	# ssh://git@bitbucket.org/ceason/rules_terraform.git
+	ssh://git@*) remote_url=${remote_url#ssh://git@*} ;;
+
+	# git@github.com:ceason/rules_terraform.git
+	git@*) remote_url=${remote_url#git@*} ;;
+	*)
+		>&2 echo "Unrecognized format for git remote url '$remote_url'"
+		exit 1
+		;;
+	esac
+
+	# parse the components of the remote
+	remote_url=${remote_url%.git}
+	remote_host=$(   awk -F'[:/]' '{print $1}' <<< "$remote_url")
+	remote_account=$(awk -F'[:/]' '{print $2}' <<< "$remote_url")
+	remote_repo=$(   awk -F'[:/]' '{print $3}' <<< "$remote_url")
+
+	local commit_link_prefix="https://$remote_host/$remote_account/$remote_repo/commit"
+
 	# find all commits relevant to the source files
 	local filtered_commits=$(mktemp)
 	local filtered_commits_unique=$(mktemp)
@@ -64,7 +99,7 @@ generate-changelog(){
 	# create an ordered changelog, including only the filtered commits
 	while read commit; do
 		if grep -q $commit $filtered_commits_unique; then
-			git show -s --format='- _%aD_ `%h` %s' $commit >> "$output_file"
+			git show -s --date=short --format="- _%cd_ [\`%h\`]($commit_link_prefix/%H) %s" $commit >> "$output_file"
 		fi
 	done < <(git log --pretty='%H')
 	rm -rf $filtered_commits
