@@ -82,8 +82,11 @@ terraform_integration_test(
 ```
 
 ### [`.bazelrc`](../.bazelrc)
+> We've created & tested our module; now we're ready to publish it--but
+what about $(IMAGE_CHROOT) from earlier? We configure that in the
+workspace's `.bazelrc`. By default we upload locally, but when running
+bazel with `--config=publish` we'll upload to a remote repository.
 ```
-# Upload images locally by default, but remotely when publishing
 build         --define IMAGE_CHROOT=registry.kube-system.svc.cluster.local:80
 build:publish --define IMAGE_CHROOT=index.docker.io/netchris
 ```
