@@ -1,4 +1,4 @@
-- _Sat, 20 Oct 2018 16:37:25 -0400_ `56067e2` Format file with spaces
-- _Sun, 14 Oct 2018 17:54:30 -0400_ `7a4f4f5` Implement 'terraform_k8s_objects' & 'image_resolver'
-- _Mon, 8 Oct 2018 20:23:12 -0400_ `f805cd7` Make 'kubectl_' resources use a generated/isolated test namespace by default
-- _Wed, 3 Oct 2018 14:47:25 -0400_ `568982a` Reverse terraform_{workspace,module} 'modules' attribute
+- _2018-10-20_ [`56067e2`](https://github.com/ceason/rules_terraform/commit/56067e2ca4222afab0aae6e749d0fecb746d9239) Format file with spaces
+- _2018-10-14_ [`7a4f4f5`](https://github.com/ceason/rules_terraform/commit/7a4f4f5c4273bff017b02a260961b744f77cf3f4) Implement 'terraform_k8s_objects' & 'image_resolver'
+- _2018-10-08_ [`f805cd7`](https://github.com/ceason/rules_terraform/commit/f805cd7e61f281596705f4d2ffc9e3d38e49f16d) Make 'kubectl_' resources use a generated/isolated test namespace by default
+- _2018-10-03_ [`568982a`](https://github.com/ceason/rules_terraform/commit/568982af0af06e6a2eced0f6cd505b8cab174b84) Reverse terraform_{workspace,module} 'modules' attribute
