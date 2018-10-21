@@ -11,16 +11,13 @@ terraform_workspace(
 sh_test(
     name = "e2e_test",
     srcs = ["e2e.sh"],
-    tags = [
-        "manual",
-    ],
+    tags = ["manual"],
 )
 
 terraform_integration_test(
     name = "e2e_integration_test",
     timeout = "short",
-    #flaky = 1,
     srctest = ":e2e_test",
-    # tags = ["manual"],
+    tags = ["manual"],
     terraform_workspace = ":test-workspace",
 )

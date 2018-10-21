@@ -1,10 +1,10 @@
 
 
-### `src/BUILD`
+### [`src/BUILD`](src/BUILD)
 ```python
-load("//terraform:def.bzl", "terraform_module")
+load("//terraform:def.bzl", "terraform_module", "terraform_workspace")
+load("//terraform:container.bzl", "image_embedder", "terraform_k8s_manifest")
 load("@io_bazel_rules_docker//python:image.bzl", "py_image")
-load("@io_bazel_rules_k8s//k8s:object.bzl", "k8s_object")
 
 # First we build a docker image from our app's source
 py_image(
@@ -15,32 +15,33 @@ py_image(
 
 # Next, we create a Kubernetes Deployment which references the
 # image we just created. Also note:
-# - We have specified an 'image_chroot' which allows us to change where the image is published to
-# - The actual image_chroot is determined at build time based on the output of './tools/print-workspace-status.sh'
-k8s_object(
-    name = "deployment",
-    image_chroot = "{STABLE_IMAGE_CHROOT}",
+# - We have specified an 'image_chroot' which allows us to change where
+#   the image is published
+# - The actual image_chroot is determined at build time based on what
+#   we've defined in '.bazelrc' (more on this later)
+terraform_k8s_manifest(
+    name = "k8s-deployment",
+    srcs = ["server.yaml"],
+    image_chroot = "$(IMAGE_CHROOT)",
     images = {
         "hello-world-server:dev": ":py_image",
     },
-    template = "server.yaml",
 )
 
 # We combine our terraform files with the Kubernetes Deployment
 # to create a terraform module
 terraform_module(
-    name = "hello-world",
-    srcs = glob(["*.tf"]),
-    description = "This is an example terraform module, built with bazel!",
-    embed = [
-        ":deployment",
+    name = "hello-world_k8s",
+    srcs = [
+        "k8s.tf",
+        "main.tf",
     ],
+    embed = [":k8s-deployment"],
     visibility = ["//visibility:public"],
 )
-
 ```
 
-### `test/BUILD`
+### [`test/BUILD`](test/BUILD)
 ```python
 load("//terraform:def.bzl", "terraform_integration_test", "terraform_workspace")
 
@@ -52,7 +53,7 @@ terraform_workspace(
     name = "test-workspace",
     srcs = ["test_ws.tf"],
     modules = {
-        "module": "//examples/src:hello-world",
+        "module": "//examples/src:hello-world_k8s",
     },
 )
 
@@ -64,9 +65,7 @@ terraform_workspace(
 sh_test(
     name = "e2e_test",
     srcs = ["e2e.sh"],
-    tags = [
-        "manual",
-    ],
+    tags = ["manual"],
 )
 
 # ..But we still want an easy-to-run test that doesn't require manually spinning up
@@ -76,40 +75,42 @@ sh_test(
 terraform_integration_test(
     name = "e2e_integration_test",
     timeout = "short",
-    flaky = 1,
     srctest = ":e2e_test",
-    tags = [
-        "manual",
-    ],
+    tags = ["manual"],
     terraform_workspace = ":test-workspace",
 )
-
-
 ```
 
-### `release/BUILD`
+### [`.bazelrc`](../.bazelrc)
+```
+# Upload images locally by default, but remotely when publishing
+build         --define IMAGE_CHROOT=registry.kube-system.svc.cluster.local:80
+build:publish --define IMAGE_CHROOT=index.docker.io/netchris
+```
+
+### [`release/BUILD`](release/BUILD)
 ```python
 load("//terraform:def.bzl", "terraform_module_publisher")
 
 # To make our terraform module available to others we configure a
 # 'terraform_module_publisher' which will
 # - Run configured tests
-# - Publish relevant docker images (note that we're overriding the image_chroot)
-# - Output each module into its own subdirectory in this repo (note that we can optionally output to a different repo)
+# - Publish relevant docker images
+# - Output each module into its own subdirectory in this repo (note
+#   that we can optionally output to a different repo)
 terraform_module_publisher(
     name = "publish",
-    env = {
-        "IMAGE_CHROOT": "index.docker.io/netchris",
-    },
+    bazelrc_config = "publish",
     prepublish_tests = [
-        "//...",
+        # bazel excludes all tests tagged as 'manual' from wildcard
+        # patterns, so we explicitly include our e2e test.
+        "//...", # <- means 'all tests' (which aren't tagged 'manual')
         "//examples/test:e2e_integration_test",
     ],
     published_modules = {
-        "mymodule": "//examples/src:hello-world",
+        "mymodule": "//examples/src:hello-world_k8s",
+        "mymodule-ecs": "//examples/src:hello-world_ecs",
     },
     # remote = "git@github.com:my-org-terraform-modules/terraform-myproject-modules.git",
     # remote_path = "modules",
 )
-
----
