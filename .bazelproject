@@ -1,7 +1,10 @@
 directories:
   .
   -target
+  -examples/release/mymodule
 
 targets:
   //...
 
+test_sources:
+  examples/test/*
