@@ -4,9 +4,9 @@ set -euo pipefail
 err_report() { echo "errexit on line $(caller)" >&2; }
 trap err_report ERR
 
-source ${BUILD_WORKING_DIRECTORY:="."}/.rules_terraform/test-workspace/test_vars.sh
+source ${BUILD_WORKING_DIRECTORY:="."}/.rules_terraform/test_vars.sh
 
-until response=$(curl -sSL http://hello-world-server.$NAMESPACE.svc.cluster.local); do
+until response=$(curl -sSL "$SERVICE_URL"); do
 	>&2 echo "Could not connect to server, waiting a bit.."
 	sleep 2
 done

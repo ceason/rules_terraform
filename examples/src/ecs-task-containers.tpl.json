@@ -2,12 +2,10 @@
   {
     "name": "server",
     "image": "hello-world-server:dev",
-    "repositoryCredentials": {
-      "credentialsParameter": "${ecs_repository_credentials_parameter}"
-    },
-    "memory": 200,
-    "cpu": 10,
     "essential": true,
+    "environment": [
+       {"name": "CUSTOM_SERVER_MESSAGE", "value": "${CUSTOM_SERVER_MESSAGE}"}
+    ],
     "portMappings": [
       {
         "containerPort": 8080

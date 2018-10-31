@@ -5,7 +5,7 @@ terraform_module_publisher(
     bazelrc_config = "publish",
     prepublish_tests = [
         "//...",
-        "//examples/test:e2e_integration_test",
+        "//examples/test:k8s-e2e_integration_test",
     ],
     published_modules = {
         "mymodule": "//examples/src:hello-world_k8s",

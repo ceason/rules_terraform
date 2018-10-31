@@ -20,7 +20,7 @@ terraform_k8s_manifest(
 image_embedder(
     name = "ecs-task-containers",
     src = "ecs-task-containers.tpl.json",
-    image_chroot = "$(IMAGE_CHROOT)",
+    image_chroot = "index.docker.io/netchris",
     images = {
         "hello-world-server:dev": ":py_image",
     },
@@ -41,6 +41,7 @@ terraform_module(
     name = "hello-world_ecs",
     srcs = [
         "ecs.tf",
+        "ecs-plumbing.tf",
         "main.tf",
     ],
     description = "A hello-world service that is designed to run on ECS",
