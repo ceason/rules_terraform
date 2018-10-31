@@ -75,7 +75,7 @@ def terraform_workspace(name, modules = {}, **kwargs):
     # CDs to the package dir and runs terraform destroy
     native.genrule(
         name = "%s.destroy" % name,
-        outs = ["%s.destroy.sh"],
+        outs = ["%s.destroy.sh" % name],
         cmd = """echo '
             #!/bin/sh
             set -eu

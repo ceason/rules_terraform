@@ -22,11 +22,6 @@ WorkspaceInfo = provider(
 
 DistributionDirInfo = provider()
 
-# Workspace files are prefixed as '.rules_terraform/{tf_workspace_name}'
+# Workspace files are prefixed as '.rules_terraform'
 def tf_workspace_files_prefix(target):
-    format = ".rules_terraform/%s"
-    if hasattr(target, "label"):
-        return format % target.label.name
-    if hasattr(target, "name"):
-        return format % target.name
-    return format % target.split(":")[-1]
+    return ".rules_terraform"
