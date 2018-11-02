@@ -10,7 +10,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(s):
         print("Received HTTP request")
         s.send_response(200)
-        s.send_header("Content-type", "text/text")
+        s.send_header("Content-type", "text/plain")
         s.end_headers()
         s.wfile.write(SERVER_MESSAGE)
 

@@ -21,4 +21,6 @@ SERVICE_URL="${module.hello_world.service_url}"
 EOF
 }
 
-
+output service_url {
+  value = "${module.hello_world.service_url}"
+}

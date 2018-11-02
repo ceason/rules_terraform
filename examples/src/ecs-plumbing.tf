@@ -64,8 +64,8 @@ resource aws_security_group helloworld_ecs {
 
   ingress {
     protocol        = "tcp"
-    from_port       = 0
-    to_port         = 0
+    from_port       = 8080
+    to_port         = 8080
     security_groups = ["${aws_security_group.helloworld_lb.id}"]
   }
 

@@ -58,8 +58,12 @@ resource aws_ecs_service hello_world {
   }
 
   network_configuration {
-    security_groups = ["${aws_security_group.helloworld_ecs.id}"]
-    subnets         = ["${var.subnet_ids}"]
+    security_groups  = ["${aws_security_group.helloworld_ecs.id}"]
+    subnets          = ["${var.subnet_ids}"]
+
+    # todo: don't use public IP
+    # need to set up NAT gateway so fargate can pull from registry (see https://github.com/aws/amazon-ecs-agent/issues/1128#issuecomment-354884572)
+    assign_public_ip = true
   }
 
   #placement_constraints {
@@ -68,6 +72,6 @@ resource aws_ecs_service hello_world {
   #  # todo: is this necessary? maybe AZ is implied by 'network_configuration.subnets' ?
   #}
 
-  #depends_on = ["aws_lb_listener.helloworld"]
+  depends_on      = ["aws_lb_listener.helloworld"]
 }
 
