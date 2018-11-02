@@ -9,5 +9,6 @@ terraform_module_publisher(
     ],
     published_modules = {
         "mymodule": "//examples/src:hello-world_k8s",
+        "mymodule-ecs": "//examples/src:hello-world_ecs",
     },
 )
