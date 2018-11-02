@@ -2,6 +2,7 @@ directories:
   .
   -target
   -examples/release/mymodule
+  -examples/release/mymodule-ecs
 
 targets:
   //...
