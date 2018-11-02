@@ -1,4 +1,5 @@
 - _2018-11-02_ [`9744124`](https://github.com/ceason/rules_terraform/commit/9744124134e6d83f8c3129f01e325719db640c84) Fix ecs example's networking
+- _2018-10-31_ [`ebb4bf3`](https://github.com/ceason/rules_terraform/commit/ebb4bf38be9baec7e9aa65e5a7b1378ef6455fea) Add ECS+Fargate example
 - _2018-10-20_ [`56067e2`](https://github.com/ceason/rules_terraform/commit/56067e2ca4222afab0aae6e749d0fecb746d9239) Format file with spaces
 - _2018-10-14_ [`7a4f4f5`](https://github.com/ceason/rules_terraform/commit/7a4f4f5c4273bff017b02a260961b744f77cf3f4) Implement 'terraform_k8s_objects' & 'image_resolver'
 - _2018-10-08_ [`f805cd7`](https://github.com/ceason/rules_terraform/commit/f805cd7e61f281596705f4d2ffc9e3d38e49f16d) Make 'kubectl_' resources use a generated/isolated test namespace by default
