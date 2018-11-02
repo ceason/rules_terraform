@@ -14,6 +14,7 @@ tf_workspace_dir="$BUILD_WORKSPACE_DIRECTORY/%{package}/%{tf_workspace_files_pre
 tfroot="$tf_workspace_dir/.terraform/tfroot"
 plugin_dir="$tf_workspace_dir/.terraform/plugins"
 render_tf="%{render_tf}"
+ARTIFACT_PUBLISHERS=(%{artifact_publishers})
 
 export RUNFILES=${RUNFILES-$(cd "$0.runfiles" && pwd)}
 
@@ -35,6 +36,13 @@ if [ $# -gt 0 ]; then
   command=$1; shift
 else
   command="apply"
+fi
+
+# publish artifacts if we're running apply (eg docker image publisher)
+if [ "$command" == "apply" ]; then
+	for publisher in "${ARTIFACT_PUBLISHERS[@]}"; do
+		"$publisher"
+	done
 fi
 
 case "$command" in

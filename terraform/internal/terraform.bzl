@@ -1,5 +1,12 @@
 load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo", "tf_workspace_files_prefix")
 load("//terraform/internal:terraform_lib.bzl", "create_terraform_renderer", "runfiles_path", "tf_renderer_attrs")
+load(
+    "//terraform/internal:image_embedder_lib.bzl",
+    _create_image_publisher = "create_image_publisher",
+    _image_publisher_aspect = "image_publisher_aspect",
+    _image_publisher_attrs = "image_publisher_attrs",
+    _embed_images = "embed_images",
+)
 
 def _plugin_impl(ctx):
     """
@@ -107,6 +114,14 @@ def _module_impl(ctx):
 
     # if this is a workspace, create a launcher
     if ctx.attr._is_workspace:
+        image_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
+        runfiles.append(image_publisher)
+        transitive_runfiles.append(_create_image_publisher(
+            ctx,
+            image_publisher,
+            ctx.attr.deps + ctx.attr.embed + ctx.attr.modules.keys(),
+        ))
+
         # bundle the renderer with args for the content of this tf module
         render_tf = ctx.actions.declare_file("%s.render-tf" % ctx.attr.name)
         transitive_runfiles.append(create_terraform_renderer(ctx, render_tf, module_info))
@@ -117,6 +132,7 @@ def _module_impl(ctx):
                 "%{package}": ctx.label.package,
                 "%{tf_workspace_files_prefix}": tf_workspace_files_prefix(ctx.attr.name),
                 "%{render_tf}": render_tf.short_path,
+                "%{artifact_publishers}": image_publisher.short_path,
             },
         )
         providers.append(WorkspaceInfo(render_tf = render_tf))
@@ -126,40 +142,47 @@ def _module_impl(ctx):
         transitive_files = depset(transitive = transitive_runfiles),
     ))]
 
-_common_attrs = tf_renderer_attrs + {
-    "srcs": attr.label_list(allow_files = True),
-    "deps": attr.label_list(
-        doc = "Deprecated. Use 'embed' instead ('embed' is functionally identical to 'deps', but seems more semantically correct).",
-        allow_rules = [
-            "_k8s_object",
-            "terraform_module",
-        ],
-    ),
-    "embed": attr.label_list(
-        # we should use "providers" instead, but "k8s_object" does not
-        # currently (2018-9-8) support them
-        doc = "Merge the content of other <terraform_module>s (or other 'ModuleInfo' providing deps) into this one.",
-        providers = [ModuleInfo],
-    ),
-    "modules": attr.label_keyed_string_dict(
-        # hack: disabling provider check until doc generator supports 'providers' attribute
-        #   see https://github.com/bazelbuild/skydoc/blob/master/skydoc/stubs/attr.py#L180
-        providers = [ModuleInfo],
-    ),
-    "description": attr.string(
-        doc = "Optional description of module.",
-        default = "",
-    ),
-    "plugins": attr.label_list(
-        doc = "Custom Terraform plugins that this module requires.",
-        providers = [PluginInfo],
-    ),
-}
+def _common_attrs(aspects = []):
+    return tf_renderer_attrs + {
+        "srcs": attr.label_list(
+            allow_files = True,
+            aspects = aspects,
+        ),
+        "deps": attr.label_list(
+            doc = "Deprecated. Use 'embed' instead ('embed' is functionally identical to 'deps', but seems more semantically correct).",
+            allow_rules = [
+                "_k8s_object",
+                "terraform_module",
+            ],
+            aspects = aspects,
+        ),
+        "embed": attr.label_list(
+            # we should use "providers" instead, but "k8s_object" does not
+            # currently (2018-9-8) support them
+            doc = "Merge the content of other <terraform_module>s (or other 'ModuleInfo' providing deps) into this one.",
+            providers = [ModuleInfo],
+            aspects = aspects,
+        ),
+        "modules": attr.label_keyed_string_dict(
+            # hack: disabling provider check until doc generator supports 'providers' attribute
+            #   see https://github.com/bazelbuild/skydoc/blob/master/skydoc/stubs/attr.py#L180
+            providers = [ModuleInfo],
+            aspects = aspects,
+        ),
+        "description": attr.string(
+            doc = "Optional description of module.",
+            default = "",
+        ),
+        "plugins": attr.label_list(
+            doc = "Custom Terraform plugins that this module requires.",
+            providers = [PluginInfo],
+        ),
+    }
 
 terraform_module = rule(
     implementation = _module_impl,
     attrs = dict(
-        _common_attrs.items(),
+        _common_attrs().items(),
         # hack: this flag lets us share the same implementation function as 'terraform_module'
         _is_workspace = attr.bool(default = False),
     ),
@@ -168,13 +191,12 @@ terraform_module = rule(
 terraform_workspace = rule(
     implementation = _module_impl,
     executable = True,
-    attrs = dict(
-        _common_attrs.items(),
+    attrs = _common_attrs([_image_publisher_aspect]) + _image_publisher_attrs + {
         # hack: this flag lets us share the same implementation function as 'terraform_module'
-        _is_workspace = attr.bool(default = True),
-        _workspace_launcher_template = attr.label(
+        "_is_workspace": attr.bool(default = True),
+        "_workspace_launcher_template" : attr.label(
             allow_single_file = True,
             default = "//terraform/internal:workspace_launcher.sh.tpl",
         ),
-    ),
+    },
 )
