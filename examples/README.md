@@ -117,3 +117,6 @@ terraform_module_publisher(
     # remote = "git@github.com:my-org-terraform-modules/terraform-myproject-modules.git",
     # remote_path = "modules",
 )
+```
+
+Check out the [release directory](release/mymodule) to see the published module!
