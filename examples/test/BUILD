@@ -38,6 +38,7 @@ terraform_integration_test(
 
 terraform_integration_test(
     name = "ecs-e2e_integration_test",
+    timeout = "long",
     srctest = ":e2e_test",
     tags = ["manual"],
     terraform_workspace = ":ecs-workspace",
