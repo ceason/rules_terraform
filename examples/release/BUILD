@@ -6,6 +6,7 @@ terraform_module_publisher(
     prepublish_tests = [
         "//...",
         "//examples/test:k8s-e2e_integration_test",
+        #"//examples/test:ecs-e2e_integration_test",
     ],
     published_modules = {
         "mymodule": "//examples/src:hello-world_k8s",
