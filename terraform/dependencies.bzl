@@ -41,11 +41,11 @@ def terraform_repositories():
         native.new_http_archive(
             name = "yaml",
             build_file_content = """
-        py_library(
-            name = "yaml",
-            srcs = glob(["*.py"]),
-            visibility = ["//visibility:public"],
-        )""",
+py_library(
+    name = "yaml",
+    srcs = glob(["*.py"]),
+    visibility = ["//visibility:public"],
+)""",
             sha256 = "592766c6303207a20efc445587778322d7f73b161bd994f227adaa341ba212ab",
             url = ("https://pypi.python.org/packages/4a/85/" +
                    "db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a" +
