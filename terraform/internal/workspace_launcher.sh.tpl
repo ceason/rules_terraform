@@ -62,6 +62,15 @@ workspace|import|output|taint|untaint|state|debug)
   exec terraform "$command" "$@"
   ;;
 
+# these commands
+# - render the tfroot/plugins dirs
+providers)
+  rm -rf "$tfroot"
+  "$render_tf" --output_dir "$tfroot" --plugin_dir "$plugin_dir" --symlink
+  cd "$tf_workspace_dir"
+  exec terraform "$command" "$@" "$tfroot"
+  ;;
+
 # all other commands
 # - render the tfroot/plugins dirs
 # - initialize tf
