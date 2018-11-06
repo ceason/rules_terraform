@@ -115,7 +115,6 @@ def create_image_publisher(ctx, output, aspect_targets):
         if targets != None:
             for target in targets.to_list():
                 info = target[ImagePublishInfo]
-                #print(info)
                 transitive_runfiles.append(info.runfiles)
                 image_specs.extend(info.image_specs)
 
@@ -152,11 +151,10 @@ def create_image_publisher(ctx, output, aspect_targets):
                         export RUNFILES="$PWD"
                       fi
                     fi
-                    exec %s "$@" <&0
-                    """ % " ".join([
-        runfiles_path(ctx, ctx.executable._image_embedder),
-        "@%s" % runfiles_path(ctx, args_file),
-    ]), is_executable = True)
+                    exec "%s" "@%s" "$@" <&0
+                    """ % (ctx.executable._image_embedder.short_path, args_file.short_path), is_executable = True)
+    transitive_runfiles.append(ctx.attr._image_embedder.default_runfiles.files)
+    transitive_runfiles.append(ctx.attr._image_embedder.data_runfiles.files)
 
     return depset(direct = runfiles, transitive = transitive_runfiles)
 
