@@ -24,6 +24,11 @@ _EXTERNAL_BINARIES = {
         url = "https://github.com/wercker/stern/releases/download/{version}/stern_{platform}_amd64",
         version = "1.8.0",
     ),
+    "hub": dict(
+        url = "https://github.com/github/hub/releases/download/v{version}/hub-{platform}-amd64-{version}.tgz",
+        path = "hub-{platform}-amd64-{version}/bin/hub",
+        version = "2.5.1",
+    ),
 }
 
 def _repository_name(s):
