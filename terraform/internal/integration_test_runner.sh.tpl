@@ -5,6 +5,9 @@ err_report() { echo "errexit on line $(caller)" >&2; }
 trap err_report ERR
 
 export RUNFILES=${RUNFILES_DIR}
+# guess the kubeconfig location if it isn't already set
+: ${KUBECONFIG:="/Users/$USER/.kube/config:/home/$USER/.kube/config"}
+export KUBECONFIG
 
 # register cleanup traps here, then execute them on EXIT!
 ITS_A_TRAP=()
@@ -23,43 +26,19 @@ cleanup(){
 }
 trap cleanup EXIT
 
-render_tf="%{render_tf}"
+render_workspace="%{render_workspace}"
 stern="$PWD/%{stern}"
 SRCTEST="%{srctest}"
-tf_workspace_files_prefix="%{tf_workspace_files_prefix}"
-PRETEST_PUBLISHERS=(%{pretest_publishers})
 
-# run pretest publishers (eg docker image publisher)
-for publisher in "${PRETEST_PUBLISHERS[@]}"; do
-	"$publisher"
-done
-
-mkdir -p "$tf_workspace_files_prefix"
-
-: ${TMPDIR:=/tmp}
-: ${TF_PLUGIN_CACHE_DIR:=$TMPDIR/rules_terraform/plugin-cache}
-export TF_PLUGIN_CACHE_DIR
-mkdir -p "$TF_PLUGIN_CACHE_DIR"
-
-# guess the kubeconfig location if it isn't already set
-: ${KUBECONFIG:="/Users/$USER/.kube/config:/home/$USER/.kube/config"}
-export KUBECONFIG
-
-# render the tf to a tempdir
-tfroot=$TEST_TMPDIR/tf/tfroot
-tfplan=$TEST_TMPDIR/tf/tfplan
-tfstate=$TEST_TMPDIR/tf/tfstate.json
-rm -rf "$TEST_TMPDIR/tf"
-mkdir -p "$TEST_TMPDIR/tf"
-chmod 700 $(dirname "$tfstate")
-"$render_tf" --output_dir "$tfroot" --plugin_dir "$tf_workspace_files_prefix/.terraform/plugins" --symlink_plugins
+# render the tf
+terraform=$("$render_workspace" --symlink_plugins "$PWD/.rules_terraform")
 
 # init and validate terraform
-pushd "$tf_workspace_files_prefix" > /dev/null
-timeout 20 terraform init -input=false "$tfroot"
-timeout 20 terraform validate "$tfroot"
+timeout 20 "$terraform" init -input=false
+timeout 20 "$terraform" validate
+
 # if the kubectl provider is used then create a namespace for the test
-if [ "$(find .terraform/plugins/ -type f \( -name 'terraform-provider-kubernetes_*' -o -name 'terraform-provider-kubectl_*' \)|wc -l)" -gt 0 ]; then
+if [ "$(find .rules_terraform/.terraform/plugins/ -type f \( -name 'terraform-provider-kubernetes_*' -o -name 'terraform-provider-kubectl_*' \)|wc -l)" -gt 0 ]; then
 	kubectl config view --merge --raw --flatten > "$TEST_TMPDIR/kubeconfig.yaml"
 	ITS_A_TRAP+=("rm -rf '$TEST_TMPDIR/kubeconfig.yaml'")
 	kube_context=$(kubectl config current-context)
@@ -71,14 +50,10 @@ if [ "$(find .terraform/plugins/ -type f \( -name 'terraform-provider-kubernetes
 	# tail stuff with stern in the background
 	"$stern" '.*' --tail 1 --color always &
 fi
-timeout 20 terraform plan -out="$tfplan" -input=false "$tfroot"
-popd > /dev/null
 
 # apply the terraform
-ITS_A_TRAP+=("cd '$PWD/$tf_workspace_files_prefix' && terraform destroy -state='$tfstate' -auto-approve -refresh=false")
-pushd "$tf_workspace_files_prefix" > /dev/null
-terraform apply -state-out="$tfstate" -auto-approve "$tfplan"
-popd > /dev/null
+ITS_A_TRAP+=("$terraform destroy -auto-approve -refresh=false")
+"$terraform" apply -input=false -auto-approve
 
 # run the test & await its completion
 "$SRCTEST" "$@"

@@ -12,23 +12,14 @@ def _integration_test_impl(ctx):
     transitive_runfiles.append(ctx.attr._stern.data_runfiles.files)
     transitive_runfiles.append(ctx.attr.srctest.data_runfiles.files)
     transitive_runfiles.append(ctx.attr.terraform_workspace.data_runfiles.files)
-    render_tf = ctx.attr.terraform_workspace[WorkspaceInfo].render_tf
-
-    image_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
-    transitive_runfiles.append(create_image_publisher(
-        ctx,
-        image_publisher,
-        [ctx.attr.srctest, ctx.attr.terraform_workspace],
-    ))
+    render_workspace = ctx.attr.terraform_workspace[WorkspaceInfo].render_workspace
 
     ctx.actions.expand_template(
         template = ctx.file._runner_template,
         substitutions = {
-            "%{render_tf}": render_tf.short_path,
+            "%{render_workspace}": render_workspace.short_path,
             "%{srctest}": ctx.executable.srctest.short_path,
             "%{stern}": ctx.executable._stern.short_path,
-            "%{tf_workspace_files_prefix}": tf_workspace_files_prefix(ctx.attr.terraform_workspace),
-            "%{pretest_publishers}": image_publisher.short_path,
         },
         output = ctx.outputs.executable,
         is_executable = True,
@@ -38,8 +29,6 @@ def _integration_test_impl(ctx):
         runfiles = ctx.runfiles(
             files = runfiles,
             transitive_files = depset(transitive = transitive_runfiles),
-            #            collect_data = True,
-            #            collect_default = True,
         ),
     )]
 
@@ -64,7 +53,7 @@ terraform_integration_test = rule(
             aspects = [image_publisher_aspect],
         ),
         "_runner_template": attr.label(
-            default = "//terraform/internal:test_runner.sh.tpl",
+            default = "//terraform/internal:integration_test_runner.sh.tpl",
             allow_single_file = True,
         ),
         "_stern": attr.label(

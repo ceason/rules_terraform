@@ -8,8 +8,8 @@ _EXTERNAL_BINARIES = {
         version = "1.11.1",
     ),
     "terraform-docs": dict(
-        url = "https://github.com/segmentio/terraform-docs/releases/download/v{version}/terraform-docs_{platform}_amd64",
-        version = "0.3.0",
+        url = "https://github.com/segmentio/terraform-docs/releases/download/{version}/terraform-docs-{version}-{platform}-amd64",
+        version = "v0.5.0",
     ),
     "terraform": dict(
         url = "https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{platform}_amd64.zip",

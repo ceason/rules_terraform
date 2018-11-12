@@ -111,12 +111,13 @@ def create_image_publisher(ctx, output, aspect_targets):
     image_specs = []
 
     for t in aspect_targets:
-        targets = t[PublishableTargetsInfo].targets
-        if targets != None:
-            for target in targets.to_list():
-                info = target[ImagePublishInfo]
-                transitive_runfiles.append(info.runfiles)
-                image_specs.extend(info.image_specs)
+        if PublishableTargetsInfo in t:
+            targets = t[PublishableTargetsInfo].targets
+            if targets != None:
+                for target in targets.to_list():
+                    info = target[ImagePublishInfo]
+                    transitive_runfiles.append(info.runfiles)
+                    image_specs.extend(info.image_specs)
 
     # dedupe image specs
     image_specs = {k: None for k in image_specs}.keys()

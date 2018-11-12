@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import io
 import json
+import logging
 import os
 from collections import namedtuple
 
@@ -94,7 +95,6 @@ class ImageSpec:
             with v2_2_image.FromDisk(self._config, self._layers, legacy_base=self._tarball) as image:
                 # todo: output more friendly error message when this raises an exception
                 session.upload(image)
-                print("Successfully published image '%s@%s'" % (self._name_to_publish, image.digest()))
 
     def name_to_embed(self):
         with v2_2_image.FromDisk(self._config, self._layers, legacy_base=self._tarball) as image:
@@ -153,13 +153,13 @@ def embed(args):
         outputs.extend(map(walk, yaml.load_all(input_str)))
 
     if len(outputs) == 0:
-        print("ERROR: Nothing to resolve (Are you sure the input has valid json/yaml objects?)")
+        logging.fatal("Nothing to resolve (Are you sure the input has valid json/yaml objects?)")
         sys.exit(1)
 
     if len(unseen_strings) > 0:
-        print('ERROR: The following image references were not found:', file=sys.stderr)
-        for ref in unseen_strings:
-            print('    %s' % ref, file=sys.stderr)
+        msg = 'The following image references were not found:\n    '
+        msg = msg + "\n    ".join(unseen_strings)
+        logging.fatal(msg)
         sys.exit(1)
 
     output_content = io.BytesIO()
@@ -192,6 +192,7 @@ def publish(args):
 
 
 def main():
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     args = parser.parse_args()
 
     if args.command == "embed":

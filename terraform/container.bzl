@@ -12,8 +12,6 @@ image_publisher = _image_publisher
 
 def _image_embedder_impl(ctx):
     providers = []
-    runfiles = []
-    transitive_runfiles = []
 
     out = ctx.actions.declare_file("%s.%s" % (ctx.attr.name, ctx.file.src.extension))
     providers.append(_embed_images(
@@ -23,14 +21,24 @@ def _image_embedder_impl(ctx):
         output_format = ctx.file.src.extension,
     ))
 
+    tar = ctx.actions.declare_file(ctx.attr.name + ".tar")
+    bundle_args = ctx.actions.args()
+    bundle_args.add("--output", tar)
+    bundle_args.add("--file", [out.basename, out])
+    ctx.actions.run(
+        inputs = [out],
+        outputs = [tar],
+        arguments = [bundle_args],
+        executable = ctx.executable._bundle_tool,
+    )
+
     return providers + [
-        _ModuleInfo(files = {out.basename: out}),
+        _ModuleInfo(
+            files = {out.basename: out},
+            tar = tar,
+        ),
         DefaultInfo(
             files = depset(direct = [out]),
-            runfiles = ctx.runfiles(
-                files = runfiles,
-                transitive_files = depset(transitive = transitive_runfiles),
-            ),
         ),
     ]
 
@@ -38,6 +46,11 @@ _image_embedder = rule(
     implementation = _image_embedder_impl,
     attrs = _image_embedder_attrs + {
         "src": attr.label(allow_single_file = [".yaml", ".json", ".yml"]),
+        "_bundle_tool": attr.label(
+            default = Label("//terraform/internal:bundle"),
+            executable = True,
+            cfg = "host",
+        ),
     },
 )
 
