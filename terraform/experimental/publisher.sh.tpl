@@ -120,21 +120,16 @@ release_message=$(mktemp)
 trap "rm -rf $release_message" EXIT
 
 # find the published tag previous to our new tag
-current_tags=($(
-	parse_semver $VERSION
-	(git tag|grep -E "^[v]?[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$"
-	 echo "$tag"
-	)\
-	|sort --version-sort --reverse))
-
 current_published_tag=""
-if [ "${#current_tags[@]}" -gt 1 ]; then
-	current_published_tag=$(
-		printf "%s\n" "${current_tags[@]}"\
-		|grep -FA1 "$tag"\
-		|grep -vF "$tag"
-	)
-fi
+#current_published_tag=$(
+#	parse_semver $VERSION
+#	(git tag|grep -E "^[v]?[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$"
+#	 echo "$tag"
+#	)\
+#	|sort --version-sort --reverse\
+#	|grep -FA1 "$tag"\
+#	|grep -vF "$tag"
+#)
 
 repo_url=$("$hub" browse -u)
 echo "$tag" > "$release_message"
