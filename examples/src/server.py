@@ -1,9 +1,9 @@
 import BaseHTTPServer
 import os
 
-PORT_NUMBER = 8080
-
 SERVER_MESSAGE = os.environ.get("CUSTOM_SERVER_MESSAGE", "<no CUSTOM_SERVER_MESSAGE specified>")
+
+PORT_NUMBER = 8080
 
 
 class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
