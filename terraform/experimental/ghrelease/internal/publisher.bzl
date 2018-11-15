@@ -47,8 +47,8 @@ def _impl(ctx):
     config_file = ctx.actions.declare_file(ctx.attr.name + ".config.json")
     files.append(config_file)
     config = struct(
-        asset_configs = [],
-        test_configs = [],
+        asset_configs = asset_configs,
+        test_configs = test_configs,
         docs = [f.short_path for f in docs],
         docs_branch = ctx.attr.docs_branch,
         branch = ctx.attr.branch,
