@@ -81,6 +81,9 @@ class GitHelper:
         :return:
         """
         print("check_head_exists_in_remote() unimplemented")
+        rc = subprocess.call(["git", "push"], cwd=self._repo_dir)
+        if rc != 0:
+            exit(rc)
 
     def publish_docs(self, docs_dir):
         print("publish_docs() unimplemented")
