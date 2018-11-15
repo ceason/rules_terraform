@@ -42,7 +42,7 @@ def _impl(ctx):
 
     args_file = ctx.actions.declare_file(ctx.attr.name + ".args")
     files.append(args_file)
-    ctx.actions.write(args_file)
+    ctx.actions.write(args_file, "\n".join(ctx.attr.args))
 
     config_file = ctx.actions.declare_file(ctx.attr.name + ".config.json")
     files.append(config_file)
@@ -53,6 +53,7 @@ def _impl(ctx):
         docs_branch = ctx.attr.docs_branch,
         branch = ctx.attr.branch,
         version = ctx.attr.version,
+        hub = ctx.executable._tool_hub.short_path,
     )
     ctx.actions.write(config_file, config.to_json())
     ctx.actions.write(
@@ -64,8 +65,10 @@ def _impl(ctx):
     )
     transitive_runfiles.append(ctx.attr._publisher_runner.data_runfiles)
     transitive_runfiles.append(ctx.attr._publisher_runner.default_runfiles)
+    transitive_runfiles.append(ctx.attr._tool_hub.data_runfiles)
+    transitive_runfiles.append(ctx.attr._tool_hub.default_runfiles)
 
-    runfiles = ctx.runfiles(files = files, transitive_files = transitive_docs)
+    runfiles = ctx.runfiles(files = files + docs)
     for rf in transitive_runfiles:
         runfiles = runfiles.merge(rf)
 
@@ -92,6 +95,11 @@ ghrelease = rule(
         "docs": attr.label_list(default = [], allow_files = True),
         "_publisher_runner": attr.label(
             default = Label("//terraform/experimental/ghrelease/internal:publisher_runner"),
+            executable = True,
+            cfg = "host",
+        ),
+        "_tool_hub": attr.label(
+            default = "@tool_hub",
             executable = True,
             cfg = "host",
         ),

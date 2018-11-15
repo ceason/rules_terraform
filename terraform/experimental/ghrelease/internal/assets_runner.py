@@ -28,6 +28,11 @@ parser.add_argument(
     help="Overwrite existing files in output_dir")
 
 parser.add_argument(
+    '--publish', dest='publish', action='store_true',
+    default=False,
+    help="Publish dependant assets such as docker images whose digests may be embedded in transitive assets.")
+
+parser.add_argument(
     'output_dir', action='store',
     help='')
 
@@ -64,10 +69,11 @@ def main(args):
         os.execvpe(cmd[0], cmd, new_env)
 
     # invoke docker image publisher
-    rc = subprocess.call([args.config.image_publisher])
-    if rc != 0:
-        print("Error, failed to publish images:")
-        exit(rc)
+    if args.publish:
+        rc = subprocess.call([args.config.image_publisher])
+        if rc != 0:
+            print("Error, failed to publish images! D:")
+            exit(rc)
 
     # copy each of the provided assets to the output dir
     for f in args.config.assets:
