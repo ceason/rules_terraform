@@ -1,0 +1,100 @@
+load(":test_suite.bzl", "GhReleaseTestSuiteInfo")
+load(":assets.bzl", "GhReleaseAssetsInfo")
+
+def _impl(ctx):
+    """
+    """
+    files = []
+    transitive_runfiles = []
+
+    transitive_docs = []
+    asset_configs = []
+    test_configs = []
+
+    for dep in ctx.attr.deps:
+        if GhReleaseAssetsInfo in dep:
+            nfo = dep[GhReleaseAssetsInfo]
+            transitive_docs.append(nfo.docs)
+            asset_configs.append(struct(
+                label = str(dep.label),
+                env = nfo.env,
+                bazel_flags = nfo.bazel_flags,
+            ))
+        if GhReleaseTestSuiteInfo in dep:
+            i = dep[GhReleaseTestSuiteInfo]
+            test_configs.append(struct(
+                label = str(dep.label),
+            ))
+
+    docs = depset(direct = ctx.files.docs, transitive = transitive_docs).to_list()
+    docs = {k: None for k in docs}.keys()
+
+    # make sure there are no duplicate filenames
+    filenames = {}
+    for f in docs:
+        if f.basename in filenames:
+            filenames[f.basename].append(f)
+        else:
+            filenames[f.basename] = [f]
+    duplicates = {k: v for k, v in filenames.items() if len(v) > 1}
+    if len(duplicates) > 0:
+        fail("Found duplicate file names: %s" % duplicates, attr = "docs")
+
+    args_file = ctx.actions.declare_file(ctx.attr.name + ".args")
+    files.append(args_file)
+    ctx.actions.write(args_file)
+
+    config_file = ctx.actions.declare_file(ctx.attr.name + ".config.json")
+    files.append(config_file)
+    config = struct(
+        asset_configs = [],
+        test_configs = [],
+        docs = [f.short_path for f in docs],
+        docs_branch = ctx.attr.docs_branch,
+        branch = ctx.attr.branch,
+        version = ctx.attr.version,
+    )
+    ctx.actions.write(config_file, config.to_json())
+    ctx.actions.write(
+        ctx.outputs.executable,
+        """#!/usr/bin/env bash
+           set -euo pipefail
+           exec "%s" "--config=$0.config.json" "@$0.args" "$@" <&0
+        """ % ctx.executable._publisher_runner.short_path,
+    )
+    transitive_runfiles.append(ctx.attr._publisher_runner.data_runfiles)
+    transitive_runfiles.append(ctx.attr._publisher_runner.default_runfiles)
+
+    runfiles = ctx.runfiles(files = files, transitive_files = transitive_docs)
+    for rf in transitive_runfiles:
+        runfiles = runfiles.merge(rf)
+
+    return [
+        DefaultInfo(
+            files = depset(direct = files),
+            runfiles = runfiles,
+        ),
+    ]
+
+ghrelease = rule(
+    _impl,
+    attrs = {
+        "deps": attr.label_list(
+            default = [],
+            providers = [
+                [GhReleaseAssetsInfo],
+                [GhReleaseTestSuiteInfo],
+            ],
+        ),
+        "version": attr.string(mandatory = True),
+        "branch": attr.string(default = "master"),
+        "docs_branch": attr.string(default = "docs"),
+        "docs": attr.label_list(default = [], allow_files = True),
+        "_publisher_runner": attr.label(
+            default = Label("//terraform/experimental/ghrelease/internal:publisher_runner"),
+            executable = True,
+            cfg = "host",
+        ),
+    },
+    executable = True,
+)

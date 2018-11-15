@@ -2,8 +2,8 @@
 
 ## GH Release Sequence
 #### Local Pre-flight checks
+- test all `ghrelease_test_suite`s
 - build all configured builds+tests
-- test all `release_tests`
 - check that all transitive (BUILD+source)files for artifacts & tests match with HEAD
   - else prompt user to commit specified files
 - ?check that no '--override_repository' (use '--announce_rc' flag to see effective flags per-config?)
@@ -42,6 +42,7 @@ Required attrs:
 Optional attrs:
 - `branch` (default master)
 - `default_flags` List of default flags (eg --prerelease,--draft,etc)
+- `docs` List of files to include as docs
 - `docs_branch` (default docs) Any provided docs will be added to the HEAD of this branch
 - `github_domain` (default github.com)
 
@@ -51,12 +52,7 @@ Attrs:
 - `tests` list of test patterns to run
 - `tags` maybe find tests dynamically based on specified tags(/-negation)?
 
-#### `release_asset`
-Attrs:
-- `bazel_flags`
-- `srcs`
-
-#### `release_docs`
+#### `release_assets`
 Attrs:
 - `bazel_flags`
 - `srcs`
