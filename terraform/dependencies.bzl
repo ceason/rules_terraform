@@ -27,7 +27,7 @@ _EXTERNAL_BINARIES = {
     "hub": dict(
         url = "https://github.com/github/hub/releases/download/v{version}/hub-{platform}-amd64-{version}.tgz",
         path = "hub-{platform}-amd64-{version}/bin/hub",
-        version = "2.5.1",
+        version = "2.6.0",
     ),
 }
 
@@ -52,8 +52,21 @@ py_library(
     visibility = ["//visibility:public"],
 )""",
             sha256 = "592766c6303207a20efc445587778322d7f73b161bd994f227adaa341ba212ab",
-            url = ("https://pypi.python.org/packages/4a/85/" +
-                   "db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a" +
-                   "/PyYAML-3.12.tar.gz"),
+            url = ("https://pypi.python.org/packages/4a/85/db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a/PyYAML-3.12.tar.gz"),
             strip_prefix = "PyYAML-3.12/lib/yaml",
+        )
+    if "py_semver" not in native.existing_rules():
+        native.new_http_archive(
+            name = "py_semver",
+            build_file_content = """
+py_library(
+    name = "py_semver",
+    srcs = glob(["*.py"]),
+    visibility = ["//visibility:public"],
+    imports = ["semver"],
+)
+""",
+            sha256 = "5b09010a66d9a3837211bb7ae5a20d10ba88f8cb49e92cb139a69ef90d5060d8",
+            url = "https://files.pythonhosted.org/packages/47/13/8ae74584d6dd33a1d640ea27cd656a9f718132e75d759c09377d10d64595/semver-2.8.1.tar.gz",
+            strip_prefix = "semver-2.8.1",
         )

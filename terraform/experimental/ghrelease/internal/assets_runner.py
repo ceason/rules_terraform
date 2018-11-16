@@ -1,18 +1,16 @@
 from __future__ import print_function
 
 import argparse
+import errno
 import json
 import os
 import shutil
 import subprocess
+import sys
 from collections import namedtuple
 from os import path
 
-import errno
-import sys
-
-# Use this env var to determine if this script was invoked w/ the appropriate bazel flags
-BazelFlagsEnvVar = "RULES_TERRAFORM_GHRELEASE_BAZEL_FLAGS"
+from lib import BazelFlagsEnvVar
 
 parser = argparse.ArgumentParser(
     description="Builds artifacts & outputs them to the specified directory")
@@ -47,7 +45,7 @@ def main(args):
         output_dir = path.normpath(output_dir)
     try:
         # create the output dir
-        os.makedirs(output_dir, mode=0755)
+        os.makedirs(output_dir, mode=0o755)
     except OSError as e:
         # ignore if existing dir, but raise otherwise
         if e.errno != errno.EEXIST:
@@ -83,7 +81,6 @@ def main(args):
             exit(1)
         src_path = path.realpath(f)
         shutil.copyfile(src_path, tgt_path)
-
 
 
 if __name__ == '__main__':
