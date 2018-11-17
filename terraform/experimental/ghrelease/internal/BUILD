@@ -9,15 +9,16 @@ py_library(
     name = "lib",
     srcs = ["lib.py"],
     imports = [
-        "rules_terraform/terraform/experimental/ghrelease/internal"
+        "rules_terraform/terraform/experimental/ghrelease/internal",
     ],
     deps = [
         "@py_semver",
-    ]
+    ],
 )
 
 py_test(
     name = "test",
+    size = "small",
     srcs = ["test.py"],
     deps = [":lib"],
 )

@@ -1,6 +1,17 @@
 load(":test_suite.bzl", "GhReleaseTestSuiteInfo")
 load(":assets.bzl", "GhReleaseAssetsInfo")
 
+def _parse_version(version):
+    v = version
+    if v.startswith("v"):
+        v = v[1:]
+    parts = v.split(".")
+    if (len(parts) == 2 and
+        parts[0].isdigit() and
+        parts[1].isdigit()):
+        return struct(major = parts[0], minor = parts[1])
+    fail("Expected '[v]MAJOR.MINOR' but got '%s'" % version, attr = "version")
+
 def _impl(ctx):
     """
     """
@@ -52,7 +63,7 @@ def _impl(ctx):
         docs = [f.short_path for f in docs],
         docs_branch = ctx.attr.docs_branch,
         branch = ctx.attr.branch,
-        version = ctx.attr.version,
+        version = _parse_version(ctx.attr.version),
         hub = ctx.executable._tool_hub.short_path,
     )
     ctx.actions.write(config_file, config.to_json())

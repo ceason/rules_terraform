@@ -1,49 +1,82 @@
+from __future__ import print_function
+
 import os
+import re
 import subprocess
 from os import path
 
 # Use this env var to determine if this script was invoked w/ the appropriate bazel flags
 import semver
+import sys
+from semver import VersionInfo
 
 BazelFlagsEnvVar = "RULES_TERRAFORM_GHRELEASE_BAZEL_FLAGS"
 
 
 def next_semver(major, minor, prerelease=None, versions=None):
     # type: (int, int, str, list) -> str
+    major = int(major)
+    minor = int(minor)
 
-    semvers = [semver.parse(v[1:] if v.startswith("v") else v) for v in versions or []]
-    parts = {
-        "major": major,
-        "minor": minor,
-        "prerelease": prerelease,
-    }
-    if not semvers:
-        parts["patch"] = 0
-        parts["prerelease_patch"] = 0
-    else:
-        raise Exception("Unimplemented")
+    def stuff_we_care_about(v):
+        """
+        we only care about stuff that:
+        - has our same major+minor version
+        - is a release OR has our same prerelease token
+        """
+        if v.major != major:
+            return False
+        if v.minor != minor:
+            return False
+        if not prerelease:
+            return True
+        if v.prerelease is None:
+            return True
+        prefix = prerelease + "."
+        if v.prerelease.startswith(prefix):
+            # also needs to end in an int for us to care about it
+            return bool(re.match("^\d+$", v.prerelease[len(prefix):]))
+        return False
 
-    if prerelease:
-        return "v{major}.{minor}.{patch}-{prerelease}.{prerelease_patch}".format(**parts)
+    semvers = [
+        VersionInfo.parse(v[1:] if v.startswith("v") else v)
+        for v in versions or []
+    ]
+    semvers = filter(stuff_we_care_about, semvers)
+    if semvers:
+        latest = sorted(semvers)[-1]
+        version = str(latest)
+        # do we bump patch?
+        if not latest.prerelease:
+            version = semver.bump_patch(version)
+        # is this a final version?
+        if prerelease:
+            version = semver.bump_prerelease(version, prerelease)
+        else:
+            version = semver.finalize_version(version)
     else:
-        return "v{major}.{minor}.{patch}".format(**parts)
+        # nothing exists on the current minor version so create a new one
+        version = "%s.%s.0" % (major, minor)
+        if prerelease:
+            version += "-%s.1" % prerelease
+    return "v" + version
 
 
 class GhHelper:
-    def __init__(self, repo_dir, branch, docs_branch, version_major, version_minor, hub_binary="hub"):
+    def __init__(self, repo_dir, branch, docs_branch, version_major,
+                 version_minor, hub_binary="hub"):
         self._docs_branch = docs_branch
         self._repo_dir = repo_dir
         self._branch = branch
-        self._hub = hub_binary
         self._version_major = version_major
         self._version_minor = version_minor
+        self._hub = path.abspath(hub_binary)
 
     def get_next_semver(self, prerelease):
-        print("get_next_semver() unimplemented")
-
-        x = "asdf"
-
-        return "v0.3.0-pre.0"
+        args = [self._hub, "release"]
+        tags = subprocess.check_output(args, cwd=self._repo_dir).splitlines()
+        return next_semver(self._version_major, self._version_minor,
+                           prerelease, tags)
 
     def check_srcs_match_head(self, srcs):
         """
@@ -53,14 +86,6 @@ class GhHelper:
         :return:
         """
         print("check_srcs_match_head() unimplemented")
-
-    def check_up_to_date_with_authoritative_branch(self):
-        """
-        - local branch is current with authoritative remote+branch, ie we don't
-          need to rebase or fetchmerge (?how to ask git about this)
-        :return:
-        """
-        print("check_up_to_date_with_authoritative_branch() unimplemented")
 
     def check_local_tracks_authoritative_branch(self, publish):
         """
@@ -76,10 +101,14 @@ class GhHelper:
         - else push to remote
         :return:
         """
-        print("check_head_exists_in_remote() unimplemented")
-        rc = subprocess.call(["git", "push"], cwd=self._repo_dir)
-        if rc != 0:
-            exit(rc)
+        try:
+            print("check_head_exists_in_remote", end="...")
+            sys.stdout.flush()
+            sys.stderr.flush()
+            subprocess.check_call(["git", "push"],
+                                  cwd=self._repo_dir)
+        except subprocess.CalledProcessError as e:
+            exit(e.returncode)
 
     def publish_docs(self, docs_dir):
         print("publish_docs() unimplemented")
@@ -103,7 +132,12 @@ class GhHelper:
         commit = subprocess.check_output(["git", "rev-parse", "--verify", "HEAD"], cwd=self._repo_dir)
         hub_args += ["--commitish=%s" % commit.strip()]
         hub_args += ["--message=%s\n\n%s" % (tag, release_notes)]
+        if sys.stdout.isatty():
+            hub_args.append("--browse")
 
         rc = subprocess.call(hub_args, cwd=self._repo_dir)
         if rc != 0:
             exit(rc)
+        # get the new tag (if this wasn't a draft)
+        if not draft:
+            subprocess.call(["git", "fetch", "--tags"], cwd=self._repo_dir)

@@ -12,6 +12,16 @@ from os import path
 
 from lib import BazelFlagsEnvVar, GhHelper
 
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 parser = argparse.ArgumentParser(
     fromfile_prefix_chars='@',
     description="Runs pre-flight checks before publishing a new GitHub Release.")
@@ -22,13 +32,11 @@ parser.add_argument(
     help=argparse.SUPPRESS)
 
 parser.add_argument(
-    '--draft', dest='draft', action='store_true',
-    default=False,
+    '--draft', type=str2bool, nargs='?', const=True, default=False,
     help="")
 
 parser.add_argument(
-    '--prerelease', action='store_true',
-    default=False,
+    '--prerelease', type=str2bool, nargs='?', const=True, default=False,
     help="")
 
 parser.add_argument(
@@ -95,15 +103,14 @@ def main(args):
 
     # build the assets
     git = GhHelper(workspace_dir, args.config.branch, args.config.docs_branch,
-                   version_major=args.config.version_major,
-                   version_minor=args.config.version_minor,
+                   version_major=args.config.version.major,
+                   version_minor=args.config.version.minor,
                    hub_binary=args.config.hub)
     tag = git.get_next_semver(args.prerelease_identifier if args.prerelease else None)
     asset_srcs, build_srcs = build_assets(workspace_dir, args.config.asset_configs, assets_dir, tag, args.publish)
 
     # git-related preflight checks
     git.check_srcs_match_head(asset_srcs + test_srcs + build_srcs)
-    git.check_up_to_date_with_authoritative_branch()
     git.check_local_tracks_authoritative_branch(args.publish)
 
     # publish assets & tag as a new GH release
