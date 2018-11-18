@@ -50,7 +50,7 @@ parser.add_argument(
 
 
 def run_test_suites(workspace_dir, test_configs):
-    srcs = []
+    srcs = set()
     print("todo: run_test_suites() should return a list of all source+build files relevant to the executed tests")
     for t in test_configs:
         args = ["bazel", "run", t.label]
@@ -61,8 +61,8 @@ def run_test_suites(workspace_dir, test_configs):
 
 
 def build_assets(workspace_dir, asset_configs, assets_dir, tag, publish):
-    srcs = []
-    build_srcs = []
+    srcs = set()
+    build_srcs = set()
     print("todo: build_assets() should return two lists of files (source,build) relevant to the built assets")
     for a in asset_configs:
         new_env = {k: v for k, v in os.environ.items()}
@@ -110,14 +110,14 @@ def main(args):
     asset_srcs, build_srcs = build_assets(workspace_dir, args.config.asset_configs, assets_dir, tag, args.publish)
 
     # git-related preflight checks
-    git.check_srcs_match_head(asset_srcs + test_srcs + build_srcs)
+    git.check_srcs_match_head(asset_srcs | test_srcs | build_srcs)
     git.check_local_tracks_authoritative_branch(args.publish)
 
     # publish assets & tag as a new GH release
     if args.publish:
         git.check_head_exists_in_remote()
         docs_links = git.publish_docs(docs_dir)  # ie push them to docs_branch
-        release_notes = git.generate_changelog(docs_links, asset_srcs)
+        release_notes = git.generate_releasenotes(docs_links, asset_srcs)
         git.publish_release(assets_dir, release_notes, tag, args.draft)
 
 
