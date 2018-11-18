@@ -1,17 +1,21 @@
 from __future__ import print_function
 
+import atexit
 import logging
 import os
 import re
+import shutil
 import subprocess
 from os import path
 from subprocess import check_output
+from tempfile import mkdtemp
 
-# Use this env var to determine if this script was invoked w/ the appropriate bazel flags
 import semver
 import sys
 from semver import VersionInfo
+from typing import Union
 
+# Use this env var to determine if this script was invoked w/ the appropriate bazel flags
 BazelFlagsEnvVar = "RULES_TERRAFORM_GHRELEASE_BAZEL_FLAGS"
 
 
@@ -98,11 +102,20 @@ class GhHelper:
             ["git", "rev-parse", "--verify", "HEAD"],
             cwd=self._repo_dir).strip()
 
+        self._repo_url = check_output([self._hub, "browse", "-u"], cwd=repo_dir).strip()
+        # keep only parts of the URL we care about
+        self._repo_url = "/".join(self._repo_url.split("/")[0:5])
+
         tags = {}
-        for line in check_output(["git", "ls-remote", "--tags", self._remote_url],
-                                 cwd=repo_dir).splitlines():
-            commit, tag = line.strip().split("\trefs/tags/")
-            tags[tag] = commit
+        self._heads = set()
+        for line in check_output(["git", "ls-remote", "--tags", "--heads",
+                                  self._remote_url], cwd=repo_dir).splitlines():
+            if "\trefs/heads/" in line:
+                commit, head = line.strip().split("\trefs/heads/")
+                self._heads.add(head)
+            if "\trefs/tags/" in line:
+                commit, tag = line.strip().split("\trefs/tags/")
+                tags[tag] = commit
         self._releases = []
         for line in check_output([self._hub, "release", "--format=%T %U"],
                                  cwd=self._repo_dir).splitlines():
@@ -150,8 +163,76 @@ class GhHelper:
             exit(e.returncode)
 
     def publish_docs(self, docs_dir):
-        print("publish_docs() unimplemented")
-        return []
+        links = []
+        for root, dirs, files in os.walk(docs_dir):
+            for f in files:
+                abspath = path.normpath(path.join(root, f))
+                relpath = abspath[len(docs_dir) + 1:]
+                links.append("{repo_url}/blob/{commit}/" + relpath)
+
+        # short-circuit if there's nothing to do
+        if len(links) == 0 and self._docs_branch not in self._heads:
+            return []
+
+        # create temp dir
+        tmpdir = mkdtemp()
+        atexit.register(shutil.rmtree, tmpdir, ignore_errors=True)
+
+        # convenience wrapper
+        # - runs git in tmpdir
+        # - exits with message if there's a problem
+        # - returns process returncode otherwise
+        def _git(args):
+            # type: (Union[str, list]) -> str
+            from subprocess import PIPE
+            import shlex
+            cmd = ["git"]
+            if type(args) in (str, unicode):
+                cmd += shlex.split(args)
+            else:
+                cmd += args
+            successful_exit_codes = {0}
+            if "--exit-code" in cmd:
+                successful_exit_codes.add(1)
+            p = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, cwd=tmpdir)
+            out, err = p.communicate()
+            rc = p.poll()
+            if rc not in successful_exit_codes:
+                print("Failed to exec cmd: " + " ".join(cmd), file=sys.stderr)
+                if len(err) > 0:
+                    print(err, file=sys.stderr)
+                else:
+                    print(out, file=sys.stderr)
+                exit(rc)
+            return out
+
+        if self._docs_branch in self._heads:
+            # shallow clone docs branch if it exists
+            _git(["clone", "--depth", "1",
+                  "-b", self._docs_branch,
+                  "--", self._remote_url, tmpdir])
+        else:
+            # else init empty repo
+            _git("init")
+            _git("checkout -b " + self._docs_branch)
+            _git("remote add origin " + self._remote_url)
+
+        # check difference between docs dir and docs branch
+        worktree = "--work-tree=%s" % docs_dir
+        if self._docs_branch not in self._heads or _git(
+            [worktree, "diff", "--exit-code",
+             "remotes/origin/" + self._docs_branch]) == 1:
+            # add,commit,push docs if there is a difference
+            _git([worktree, "add", "-A"])
+            _git("commit -m 'Updating docs.'")
+            _git("push -u origin " + self._docs_branch)
+
+        commit = _git("rev-parse --verify HEAD").strip()
+
+        return [l.format(
+            commit=commit,
+            repo_url=self._repo_url,
+        ) for l in links]
 
     def generate_releasenotes(self, docs_links=None, asset_srcs=None):
         # type: (list, set) -> str
@@ -162,12 +243,8 @@ class GhHelper:
         :return:
         """
         changelog_tpl = "- [`%h`]({repo_url}/commit/%H) %s"
-        docs_tpl = """<details>
-<summary>
-## Documentation
-</summary>
-{links}
-</details>"""
+        docs_tpl = """### Docs
+{links}"""
 
         from_tag = None
         from_commit = None
@@ -191,13 +268,10 @@ class GhHelper:
                 links="\n".join(docs_links_md)))
 
         if from_commit:
-            repo_url = check_output([self._hub, "browse", "-u"])
-            # keep only parts of the URL we care about
-            repo_url = "/".join(repo_url.split("/")[0:5])
             changelog = "### Changes Since `%s`:\n" % from_tag
             changelog += check_output([
                 "git", "log",
-                "--format=%s" % changelog_tpl.format(repo_url=repo_url),
+                "--format=%s" % changelog_tpl.format(repo_url=self._repo_url),
                 "%s..%s" % (from_commit, self._commit)
             ], cwd=self._repo_dir)
             output_parts.append(changelog)
