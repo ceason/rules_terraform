@@ -14,7 +14,6 @@ from tempfile import mkdtemp
 import semver
 import sys
 from semver import VersionInfo
-from typing import Union
 
 # Use this env var to determine if this script was invoked w/ the appropriate bazel flags
 BazelFlagsEnvVar = "RULES_TERRAFORM_GHRELEASE_BAZEL_FLAGS"
