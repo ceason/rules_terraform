@@ -92,3 +92,23 @@ def terraform_workspace(name, modules = {}, **kwargs):
         modules = flip_modules_attr(modules),
         **kwargs
     )
+
+    # create a convenient destroy target which
+    # CDs to the package dir and runs terraform destroy
+    native.genrule(
+        name = "%s.destroy" % name,
+        outs = ["%s.destroy.sh" % name],
+        cmd = """echo '#!/usr/bin/env bash
+            set -euo pipefail
+            terraform="$$BUILD_WORKSPACE_DIRECTORY/{package}/{tf_workspace_files_prefix}/.terraform/terraform.sh"
+            if [ -e "$$terraform" ]; then
+                exec "$$terraform" destroy "$$@"
+            else
+                >&2 echo "Could not find terraform wrapper, so there is nothing to destroy! ($$terraform)"
+            fi
+            ' > $@""".format(
+            package = native.package_name(),
+            tf_workspace_files_prefix = tf_workspace_files_prefix(),
+        ),
+        executable = True,
+    )

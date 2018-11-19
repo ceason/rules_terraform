@@ -1,4 +1,4 @@
-load("//terraform:def.bzl", "terraform_module", "terraform_workspace")
+load("//terraform:def.bzl", "terraform_module")
 load("//terraform:container.bzl", "image_embedder", "terraform_k8s_manifest")
 load("@io_bazel_rules_docker//python:image.bzl", "py_image")
 
@@ -32,7 +32,6 @@ terraform_module(
         "k8s.tf",
         "main.tf",
     ],
-    description = "A hello-world service that is designed to run on Kubernetes",
     embed = [":k8s-deployment"],
     visibility = ["//visibility:public"],
 )
@@ -44,7 +43,6 @@ terraform_module(
         "ecs-plumbing.tf",
         "main.tf",
     ],
-    description = "A hello-world service that is designed to run on ECS",
     embed = [":ecs-task-containers"],
     visibility = ["//visibility:public"],
 )

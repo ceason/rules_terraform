@@ -1,4 +1,6 @@
-
+/**
+ * A hello-world service that is designed to run on Kubernetes
+ */
 data kubectl_namespace current {}
 
 resource kubernetes_config_map hello_world_server {

@@ -5,12 +5,6 @@ exports_files(glob([
 ]))
 
 py_binary(
-    name = "render_tf",
-    srcs = ["render_tf.py"],
-    visibility = ["//visibility:public"],
-)
-
-py_binary(
     name = "render_workspace",
     srcs = ["render_workspace.py"],
     visibility = ["//visibility:public"],
@@ -36,13 +30,6 @@ py_binary(
         "@containerregistry",
         "@yaml",
     ],
-)
-
-py_binary(
-    name = "k8s",
-    srcs = ["k8s.py"],
-    visibility = ["//visibility:public"],
-    deps = ["@yaml"],
 )
 
 py_binary(
