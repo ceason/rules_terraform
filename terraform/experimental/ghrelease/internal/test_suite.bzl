@@ -18,7 +18,6 @@ def _impl(ctx):
         env = ctx.attr.env,
         bazel_flags = ctx.attr.bazel_flags,
         tests = ctx.attr.tests,
-        message = "Running ghrelease_test_suite '%s'..." % ctx.attr.name
     )
     ctx.actions.write(config_file, config.to_json())
 

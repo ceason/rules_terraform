@@ -20,7 +20,6 @@ def main(args):
     tests = args.config['tests']
     bazel_flags = args.config['bazel_flags']
     env = args.config['env']
-    message = args.config['message']
 
     if len(tests) == 0:
         raise ValueError("Config does not contain any tests")
@@ -31,7 +30,6 @@ def main(args):
     workspace_dir = os.environ['BUILD_WORKSPACE_DIRECTORY']
     environment = {k: v for k, v in os.environ.items()}
     environment.update(env)
-    print(message)
     rc = subprocess.call(args, cwd=workspace_dir, env=environment)
     if rc == 4:
         # return code 4 means no tests found, so it's "successful"

@@ -4,10 +4,11 @@ import atexit
 import logging
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from os import path
-from subprocess import check_output
+from subprocess import CalledProcessError
 from tempfile import mkdtemp
 
 import semver
@@ -17,11 +18,6 @@ from typing import Union
 
 # Use this env var to determine if this script was invoked w/ the appropriate bazel flags
 BazelFlagsEnvVar = "RULES_TERRAFORM_GHRELEASE_BAZEL_FLAGS"
-
-
-# def _run(args, **kwargs):
-#     p = Popen(args, stdout=PIPE, stderr=PIPE,**kwargs)
-#     out, err = p.communicate()
 
 
 def next_semver(major, minor, prerelease=None, versions=None):
@@ -73,6 +69,67 @@ def next_semver(major, minor, prerelease=None, versions=None):
     return "v" + version
 
 
+class SubprocessHelper(object):
+
+    def __init__(self, args=None, chomp_output=False, **popen_kwargs):
+        """
+        Set defaults for calling a subprocess.
+        :param args: Will be prepended to all invocations.
+        :param chomp_output: Remove trailing newline from output.
+        :param popen_kwargs: Default kwargs for subprocess.Popen
+        :return:
+        """
+        self._chomp_output = chomp_output
+        self._rc = None
+        if type(args) in (str, unicode):
+            args = shlex.split(args)
+        self._args = args or []
+        if 'stdout' not in popen_kwargs:
+            popen_kwargs['stdout'] = subprocess.PIPE
+        if 'stderr' not in popen_kwargs:
+            popen_kwargs['stderr'] = subprocess.PIPE
+        self._popen_kwargs = popen_kwargs
+
+    def __call__(self, args, chomp_output=None, success_exit_codes=None, **kwargs):
+        # type: (Union[list,str], bool, list[int], dict) -> str
+        """
+        Execute the provided command and return its output.
+        :rtype: str
+        :param args: Will be appended to the default args & executed
+        :param chomp_output: Remove trailing newline from output.
+        :param success_exit_codes: Do not raise an exception when process returns these codes.
+        :param kwargs: passed through to subprocess.Popen
+        :return: 
+        """
+        success_exit_codes = success_exit_codes or {0}
+        if type(args) in (str, unicode):
+            args = shlex.split(args)
+        args = self._args + args
+        # add defaults
+        for k, v in self._popen_kwargs.items():
+            if k not in kwargs:
+                kwargs[k] = v
+        p = subprocess.Popen(args, **kwargs)
+        out, err = p.communicate()  # type: (str, str)
+        rc = p.wait()
+        self._rc = rc
+        if rc not in success_exit_codes:
+            raise CalledProcessError(rc, " ".join(args), output=err or out)
+        chomp = self._chomp_output if chomp_output is None else chomp_output
+        if chomp and out:
+            return out.rstrip("\r\n")
+        else:
+            return out
+
+    @property
+    def returncode(self):
+        # type: () -> int
+        """
+        :return: Exit code of most recently executed command.
+        """
+        return self._rc
+
+
 class ReleaseInfo(VersionInfo):
     __slots__ = ('url', 'commit', 'tag')
 
@@ -87,29 +144,31 @@ class ReleaseInfo(VersionInfo):
 class GhHelper:
 
     def __init__(self, repo_dir, branch, docs_branch, version_major,
-                 version_minor, hub_binary="hub"):
+                 version_minor, hub_binary=None):
+
         self._docs_branch = docs_branch
         self._repo_dir = repo_dir
         self._branch = branch
         self._version_major = version_major
         self._version_minor = version_minor
-        self._hub = path.abspath(hub_binary)
 
-        remote = check_output(["git", "remote"], cwd=repo_dir).strip()
-        self._remote_url = check_output(["git", "remote", "get-url", remote],
-                                        cwd=repo_dir).strip()
-        self._commit = check_output(
-            ["git", "rev-parse", "--verify", "HEAD"],
-            cwd=self._repo_dir).strip()
+        git = SubprocessHelper('git', chomp_output=True, cwd=repo_dir)
+        hub = SubprocessHelper(path.abspath(hub_binary) if hub_binary else "hub",
+                               chomp_output=True, cwd=repo_dir)
+        self._hub = hub
+        self._git = git
 
-        self._repo_url = check_output([self._hub, "browse", "-u"], cwd=repo_dir).strip()
+        remote = git("remote")
+        self._remote_url = git('remote get-url ' + remote)
+        self._commit = git('rev-parse --verify HEAD')
+        self._repo_url = hub('browse -u')
         # keep only parts of the URL we care about
         self._repo_url = "/".join(self._repo_url.split("/")[0:5])
 
         tags = {}
         self._heads = set()
-        for line in check_output(["git", "ls-remote", "--tags", "--heads",
-                                  self._remote_url], cwd=repo_dir).splitlines():
+        for line in git('ls-remote --tags --heads ' +
+                        self._remote_url).splitlines():
             if "\trefs/heads/" in line:
                 commit, head = line.strip().split("\trefs/heads/")
                 self._heads.add(head)
@@ -117,9 +176,8 @@ class GhHelper:
                 commit, tag = line.strip().split("\trefs/tags/")
                 tags[tag] = commit
         self._releases = []
-        for line in check_output([self._hub, "release", "--format=%T %U"],
-                                 cwd=self._repo_dir).splitlines():
-            tag, url = line.strip().split(" ")
+        for line in hub('release --format="%T %U"').splitlines():
+            tag, url = line.split(" ")
             commit = tags[tag]
             try:
                 self._releases.append(ReleaseInfo(tag, url, commit))
@@ -130,14 +188,15 @@ class GhHelper:
         return next_semver(self._version_major, self._version_minor,
                            prerelease, [v.tag for v in self._releases])
 
-    def check_srcs_match_head(self, srcs):
+    def check_srcs_match_head(self, srcs, publish):
         """
+        (warning or err depends if we're publishing)
         check & report on: (aka "local" git checks, bc we resolve locally)
         - all source files are checked in (accumulate srcfiles while iterating tests/artifacts?)
         :param srcs:
         :return:
         """
-        print("check_srcs_match_head() unimplemented")
+        print("check_srcs_match_head ...Unimplemented :(")
 
     def check_local_tracks_authoritative_branch(self, publish):
         """
@@ -145,7 +204,22 @@ class GhHelper:
         :param publish:
         :return:
         """
-        print("check_local_tracks_authoritative_branch() unimplemented")
+        head_ref = self._git('symbolic-ref -q HEAD')
+        tracked_branch = self._git([
+            'for-each-ref',
+            '--format=%(upstream:lstrip=3)',
+            head_ref])
+        print("check_local_tracks_authoritative_branch", end=" ...")
+        if tracked_branch != self._branch:
+            print("FAILED")
+            msg = "Local branch does not track authoritative branch '%s'" % self._branch
+            if publish:
+                print("FATAL: %s" % msg, file=sys.stderr)
+                exit(1)
+            else:
+                print("WARNING: %s (this will prevent publishing)" % msg, file=sys.stderr)
+        else:
+            print("OK")
 
     def check_head_exists_in_remote(self):
         """
@@ -153,14 +227,11 @@ class GhHelper:
         - else push to remote
         :return:
         """
-        try:
-            print("check_head_exists_in_remote", end="...")
-            sys.stdout.flush()
-            sys.stderr.flush()
-            subprocess.check_call(["git", "push"],
-                                  cwd=self._repo_dir)
-        except subprocess.CalledProcessError as e:
-            exit(e.returncode)
+        print("check_head_exists_in_remote", end=" ...")
+        sys.stdout.flush()
+        sys.stderr.flush()
+        self._git('push')
+        print("OK")
 
     def publish_docs(self, docs_dir):
         links = []
@@ -182,29 +253,8 @@ class GhHelper:
         # - runs git in tmpdir
         # - exits with message if there's a problem
         # - returns process returncode otherwise
-        def _git(args):
-            # type: (Union[str, list]) -> str
-            from subprocess import PIPE
-            import shlex
-            cmd = ["git"]
-            if type(args) in (str, unicode):
-                cmd += shlex.split(args)
-            else:
-                cmd += args
-            successful_exit_codes = {0}
-            if "--exit-code" in cmd:
-                successful_exit_codes.add(1)
-            p = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, cwd=tmpdir)
-            out, err = p.communicate()
-            rc = p.poll()
-            if rc not in successful_exit_codes:
-                print("Failed to exec cmd: " + " ".join(cmd), file=sys.stderr)
-                if len(err) > 0:
-                    print(err, file=sys.stderr)
-                else:
-                    print(out, file=sys.stderr)
-                exit(rc)
-            return out
+
+        _git = SubprocessHelper('git', chomp_output=True, cwd=tmpdir)
 
         if self._docs_branch in self._heads:
             # shallow clone docs branch if it exists
@@ -219,15 +269,20 @@ class GhHelper:
 
         # check difference between docs dir and docs branch
         worktree = "--work-tree=%s" % docs_dir
-        if self._docs_branch not in self._heads or _git(
-            [worktree, "diff", "--exit-code",
-             "remotes/origin/" + self._docs_branch]) == 1:
+
+        def has_changes():
+            _git([worktree, "diff", "--exit-code",
+                  "remotes/origin/" + self._docs_branch],
+                 success_exit_codes=[0, 1])
+            return _git.returncode == 1
+
+        if self._docs_branch not in self._heads or has_changes():
             # add,commit,push docs if there is a difference
             _git([worktree, "add", "-A"])
             _git("commit -m 'Updating docs.'")
             _git("push -u origin " + self._docs_branch)
 
-        commit = _git("rev-parse --verify HEAD").strip()
+        commit = _git("rev-parse --verify HEAD")
 
         return [l.format(
             commit=commit,
@@ -269,33 +324,34 @@ class GhHelper:
 
         if from_commit:
             changelog = "### Changes Since `%s`:\n" % from_tag
-            changelog += check_output([
-                "git", "log",
+            changelog += self._git([
+                "log",
                 "--format=%s" % changelog_tpl.format(repo_url=self._repo_url),
                 "%s..%s" % (from_commit, self._commit)
-            ], cwd=self._repo_dir)
+            ])
             output_parts.append(changelog)
 
         return "\n\n".join(output_parts)
 
     def publish_release(self, assets_dir, release_notes, tag, draft):
-        hub_args = ["hub", "release", "create"]
+        args = ["release", "create"]
         if draft:
-            hub_args += ["--draft"]
+            args += ["--draft"]
         if "-" in tag:
-            hub_args += ["--prerelease"]
+            args += ["--prerelease"]
         for root, dirs, files in os.walk(assets_dir):
             for f in files:
-                hub_args += ["--attach=%s" % path.join(root, f)]
-        hub_args += [tag]
-        hub_args += ["--commitish=%s" % self._commit]
-        hub_args += ["--message=%s\n\n%s" % (tag, release_notes)]
+                args += ["--attach=%s" % path.join(root, f)]
+        args += [tag]
+        args += ["--commitish=%s" % self._commit]
+        args += ["--message=%s\n\n%s" % (tag, release_notes)]
         if sys.stdout.isatty():
-            hub_args.append("--browse")
+            args.append("--browse")
 
-        rc = subprocess.call(hub_args, cwd=self._repo_dir)
-        if rc != 0:
-            exit(rc)
+        self._hub(args, stdout=sys.stdout, stderr=sys.stderr)
         # get the new tag (if this wasn't a draft)
         if not draft:
-            subprocess.call(["git", "fetch", "--tags"], cwd=self._repo_dir)
+            try:
+                self._git('fetch --tags')
+            except CalledProcessError as e:
+                logging.warning("Could not pull tags after publishing: %s", str(e))
