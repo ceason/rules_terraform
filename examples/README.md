@@ -135,4 +135,4 @@ ghrelease_test_suite(
 
 ```
 
-Check out the [release directory](release/mymodule) to see the published module!
+Check out the [releases page](https://github.com/ceason/rules_terraform/releases) to see the published modules!
