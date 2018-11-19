@@ -93,30 +93,46 @@ build:publish --define IMAGE_CHROOT=index.docker.io/netchris
 
 ### [`release/BUILD`](release/BUILD)
 ```python
-load("//terraform:def.bzl", "terraform_module_publisher")
+load("//terraform/experimental/ghrelease:def.bzl", "ghrelease", "ghrelease_assets", "ghrelease_test_suite")
+
+VERSION = "0.2"
 
 # To make our terraform module available to others we configure a
-# 'terraform_module_publisher' which will
-# - Run configured tests
-# - Publish relevant docker images
-# - Output each module into its own subdirectory in this repo (note
-#   that we can optionally output to a different repo)
-terraform_module_publisher(
-    name = "publish",
-    bazelrc_config = "publish",
-    prepublish_tests = [
-        # bazel excludes all tests tagged as 'manual' from wildcard
-        # patterns, so we explicitly include our e2e test.
-        "//...", # <- means 'all tests' (which aren't tagged 'manual')
-        "//examples/test:e2e_integration_test",
+# 'ghrelease' which will:
+# - Run "preflight-checks" (dependant test suites, etc)
+# - Push associated docker images
+# - Generate release notes, including a changelog from the previous
+#   version
+# - Increment the current tag/version's patch version (or prerelease
+#   version if the `--prerelease` flag is used)
+# - Create a new GitHub Release with release notes and any extra docs
+# - Attach any assets to the new Release
+ghrelease(
+    name = "release",
+    version = VERSION,
+    deps = [
+        ":prerelease-tests",
+        ":tf-modules",
     ],
-    published_modules = {
-        "mymodule": "//examples/src:hello-world_k8s",
-        "mymodule-ecs": "//examples/src:hello-world_ecs",
-    },
-    # remote = "git@github.com:my-org-terraform-modules/terraform-myproject-modules.git",
-    # remote_path = "modules",
 )
+
+ghrelease_assets(
+    name = "tf-modules",
+    bazel_flags = ["--config=publish"],
+    data = [
+        "//examples/src:hello-world_ecs",
+        "//examples/src:hello-world_k8s",
+    ],
+)
+
+ghrelease_test_suite(
+    name = "prerelease-tests",
+    tests = [
+        "//examples/...",
+        "//examples/test:k8s-e2e_integration_test",
+    ],
+)
+
 ```
 
 Check out the [release directory](release/mymodule) to see the published module!

@@ -5,7 +5,6 @@ VERSION = "0.2"
 ghrelease(
     name = "release",
     args = ["--draft"],
-    branch = "ghrelease",
     version = VERSION,
     deps = [
         ":prerelease-tests",
