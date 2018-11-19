@@ -175,7 +175,7 @@ class GhHelper:
                 commit, tag = line.strip().split("\trefs/tags/")
                 tags[tag] = commit
         self._releases = []
-        for line in hub('release --format="%T %U"').splitlines():
+        for line in hub('release --format="%T %U%n"').splitlines():
             tag, url = line.split(" ")
             commit = tags[tag]
             try:
