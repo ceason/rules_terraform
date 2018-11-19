@@ -81,7 +81,11 @@ rm -rf "$module_dir"
 
     return struct(
         terraform_module_info = module_info,
-        providers = [module_info, DefaultInfo(files = depset(direct = [ctx.outputs.out]))],
+        providers = [
+            module_info,
+            DefaultInfo(files = depset(direct = [ctx.outputs.out])),
+            OutputGroupInfo(docs = [ctx.outputs.docs_md]),
+        ],
     )
 
 def _module_attrs(aspects = []):

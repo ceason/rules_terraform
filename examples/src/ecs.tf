@@ -1,3 +1,6 @@
+/**
+ * A hello-world service that is designed to run on ECS!
+ */
 variable replicas {
   description = "Desired # of ECS replicas"
   default     = 1

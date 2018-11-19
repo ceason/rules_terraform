@@ -1,14 +1,11 @@
 load("//terraform:providers.bzl", _ModuleInfo = "ModuleInfo")
-load("//terraform/internal:k8s.bzl", _terraform_k8s_manifest = "terraform_k8s_manifest")
-load("//terraform/internal:image_embedder.bzl", _image_publisher = "image_publisher")
+load("//terraform/internal:k8s_manifest.bzl", "terraform_k8s_manifest")
+load("//terraform/internal:image_embedder.bzl", "image_publisher")
 load(
     "//terraform/internal:image_embedder_lib.bzl",
     _embed_images = "embed_images",
     _image_embedder_attrs = "image_embedder_attrs",
 )
-
-terraform_k8s_manifest = _terraform_k8s_manifest
-image_publisher = _image_publisher
 
 def _image_embedder_impl(ctx):
     providers = []
