@@ -11,12 +11,6 @@ git_repository(
     remote = "git@github.com:bazelbuild/rules_docker.git",
 )
 
-git_repository(
-    name = "io_bazel_rules_k8s",
-    commit = "d6e1b65317246fe044482f9e042556c77e6893b8",
-    remote = "git@github.com:bazelbuild/rules_k8s.git",
-)
-
 load("@io_bazel_rules_docker//container:container.bzl", "repositories")
 
 repositories()
@@ -27,10 +21,6 @@ load(
 )
 
 _py_image_repos()
-
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
-
-k8s_repositories()
 
 load("//terraform:dependencies.bzl", "terraform_repositories")
 
