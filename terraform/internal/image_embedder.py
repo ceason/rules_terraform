@@ -16,7 +16,6 @@ from containerregistry.client.v2_2 import docker_image_ as v2_2_image
 from containerregistry.client.v2_2 import docker_session_ as v2_2_session
 from containerregistry.tools import patched_ as patched
 from containerregistry.transport import transport_pool_ as transport_pool
-from future.utils import iteritems
 
 parser = argparse.ArgumentParser(
     fromfile_prefix_chars='@',
@@ -122,8 +121,8 @@ def embed(args):
     #   - if leaf node in 'embedded_images', then replace w/ digest
     def walk_dict(d):
         return {
-            walk(k): walk(v)
-            for (k, v) in iteritems(d)
+            walk(key): walk(d[key])
+            for key in d
         }
 
     def walk_list(l):
