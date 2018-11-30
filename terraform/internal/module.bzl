@@ -71,7 +71,7 @@ def _module_impl(ctx, bundle_file = None):
 set -euo pipefail
 terraform_docs="%s"
 module_dir=$(mktemp -d)
-tar -xaf "$1" -C "$module_dir"
+tar -xf "$1" -C "$module_dir"
 $terraform_docs --sort-inputs-by-required md   "$module_dir" > "$2"
 $terraform_docs --sort-inputs-by-required json "$module_dir" > "$3"
 rm -rf "$module_dir"
