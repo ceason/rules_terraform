@@ -81,6 +81,7 @@ def embed(args):
             if label in embeds:
                 raise Exception("Label '%s' already exists in embeds")
             embeds[label] = replacement
+    unseen_replacements = set(embeds.values())
 
     # make sure..
     # - all references have exactly one embeddable
@@ -100,10 +101,15 @@ def embed(args):
                 if not replacement:
                     raise ValueError("No matching label found for '%s' referenced in template file. "
                                      "Are you sure it's listed in deps?")
+                unseen_replacements.discard(replacement)
                 output_content.write(replacement)
         else:
             is_label = True
             output_content.write(s)
+    if unseen_replacements:
+        raise ValueError(
+            "Unreferenced dependencies. Either reference them in the template, "
+            "or remove them from deps (%s)" % unseen_replacements)
     with open(args.output_file, "w") as f:
         f.write(output_content.getvalue())
 
