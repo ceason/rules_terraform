@@ -1,0 +1,7 @@
+docker image is
+- {{embedded_reference :push_image}}
+- {{embedded_reference //experimental/cas/examples:push_image}}
+
+published file is
+- {{embedded_reference :big_file_url}}
+- {{embedded_reference //experimental/cas/examples:big_file_url}}
