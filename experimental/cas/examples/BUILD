@@ -18,10 +18,16 @@ container_push(
     tag = "dev",
 )
 
+java_binary(
+    name = "HelloWorld",
+    srcs = ["HelloWorld.java"],
+    main_class = "experimental.cas.examples.HelloWorld",
+)
+
 content_addressable_file(
-    name = "big_file_url",
-    src = "some-really-big-file",
-    url_prefix = "s3://whatever-bucket-name/{BUILD_USER}",
+    name = "published_jar",
+    src = ":HelloWorld_deploy.jar",
+    url_prefix = "s3://$(S3_BUCKET)/asdf/{BUILD_USER}",
 )
 
 embedded_reference(
@@ -29,12 +35,7 @@ embedded_reference(
     src = "infile.txt",
     out = "outfile.txt",
     deps = [
-        # can be ':<target>' syntax if this target in same package as infile,
-        # or '//<package>:<target>' if this tgt in same repo as infile,
-        # but must be '@<repo>//<package>:<target>' otherwise
-        ":big_file_url",
+        ":published_jar",
         ":push_image",
-        # gives a compile error if not all replacements found
     ],
 )
-

@@ -1,5 +1,6 @@
 load("//terraform/internal:http_binary.bzl", "http_archive_binary", "http_file_binary")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 _EXTERNAL_BINARIES = {
     "kubectl": dict(
@@ -42,23 +43,23 @@ def terraform_repositories():
             rule_fn = http_archive_binary if "path" in rule_args else http_file_binary
             rule_fn(name = name, **rule_args)
 
-    if "yaml" not in native.existing_rules():
-        native.new_http_archive(
-            name = "yaml",
-            build_file_content = """
+    _maybe(
+        http_archive,
+        name = "yaml",
+        build_file_content = """
 py_library(
     name = "yaml",
     srcs = glob(["*.py"]),
     visibility = ["//visibility:public"],
 )""",
-            sha256 = "592766c6303207a20efc445587778322d7f73b161bd994f227adaa341ba212ab",
-            url = ("https://pypi.python.org/packages/4a/85/db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a/PyYAML-3.12.tar.gz"),
-            strip_prefix = "PyYAML-3.12/lib/yaml",
-        )
-    if "py_semver" not in native.existing_rules():
-        native.new_http_archive(
-            name = "py_semver",
-            build_file_content = """
+        sha256 = "592766c6303207a20efc445587778322d7f73b161bd994f227adaa341ba212ab",
+        url = ("https://pypi.python.org/packages/4a/85/db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a/PyYAML-3.12.tar.gz"),
+        strip_prefix = "PyYAML-3.12/lib/yaml",
+    )
+    _maybe(
+        http_archive,
+        name = "py_semver",
+        build_file_content = """
 py_library(
     name = "py_semver",
     srcs = glob(["*.py"]),
@@ -66,7 +67,48 @@ py_library(
     imports = ["semver"],
 )
 """,
-            sha256 = "5b09010a66d9a3837211bb7ae5a20d10ba88f8cb49e92cb139a69ef90d5060d8",
-            url = "https://files.pythonhosted.org/packages/47/13/8ae74584d6dd33a1d640ea27cd656a9f718132e75d759c09377d10d64595/semver-2.8.1.tar.gz",
-            strip_prefix = "semver-2.8.1",
-        )
+        sha256 = "5b09010a66d9a3837211bb7ae5a20d10ba88f8cb49e92cb139a69ef90d5060d8",
+        url = "https://files.pythonhosted.org/packages/47/13/8ae74584d6dd33a1d640ea27cd656a9f718132e75d759c09377d10d64595/semver-2.8.1.tar.gz",
+        strip_prefix = "semver-2.8.1",
+    )
+    _maybe(
+        new_git_repository,
+        name = "py_botocore",
+        remote = "https://github.com/boto/botocore.git",
+        tag = "1.12.57",
+        build_file_content = """
+py_library(
+    name = "py_botocore",
+    srcs = glob([ "botocore/**/*.py" ]),
+    imports = [ "botocore" ],
+    visibility = [ "//visibility:public" ],
+    data = glob([ "botocore/data/**" ]),
+)
+""",
+    )
+    _maybe(
+        new_git_repository,
+        name = "py_boto3",
+        remote = "https://github.com/boto/boto3.git",
+        tag = "1.9.57",
+        build_file_content = """
+py_library(
+    name = "py_boto3",
+    srcs = glob([ "boto3/**/*.py" ]),
+    imports = [ "boto3" ],
+    deps = [ "@py_botocore" ],
+    visibility = [ "//visibility:public" ],
+    data = glob([ "boto3/data/**" ]),
+)
+""",
+    )
+    _maybe(
+        git_repository,
+        name = "io_bazel_rules_docker",
+        commit = "ff03d2b2800641bdd407bc89823c84b96aa0b15a",
+        remote = "https://github.com/ceason/rules_docker.git",
+    )
+
+def _maybe(rule, **kwargs):
+    if kwargs["name"] not in native.existing_rules():
+        rule(**kwargs)

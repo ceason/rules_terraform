@@ -1,15 +1,9 @@
 workspace(name = "rules_terraform")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("//terraform:dependencies.bzl", "terraform_repositories")
 
-# todo: figure out the deps i _actually_ need from this and load just them in 'dependencies.bzl'
-# ^- hint: maybe i only need 'containertools' ?
-# ..or maybe i don't need anything at all?? because ppl would load docker/k8s anyway?
-git_repository(
-    name = "io_bazel_rules_docker",
-    commit = "7401cb256222615c497c0dee5a4de5724a4f4cc7",
-    remote = "git@github.com:bazelbuild/rules_docker.git",
-)
+terraform_repositories()
 
 load("@io_bazel_rules_docker//container:container.bzl", "repositories")
 
@@ -21,10 +15,6 @@ load(
 )
 
 _py_image_repos()
-
-load("//terraform:dependencies.bzl", "terraform_repositories")
-
-terraform_repositories()
 
 #git_repository(
 #    name = "io_bazel_rules_sass",

@@ -1,4 +1,5 @@
 # Upload images locally by default, but remotely when publishing
+build       --define S3_BUCKET=cool-nginx-test-bucket
 build       --define IMAGE_CHROOT=registry.kube-system.svc.cluster.local:80
 run:publish --define IMAGE_CHROOT=index.docker.io/netchris
 run:publish --stamp=yes

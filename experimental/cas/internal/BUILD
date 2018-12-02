@@ -14,4 +14,5 @@ py_binary(
     name = "casfile_publisher",
     srcs = ["casfile_publisher.py"],
     visibility = ["//visibility:public"],
+    deps = ["@py_boto3"],
 )
