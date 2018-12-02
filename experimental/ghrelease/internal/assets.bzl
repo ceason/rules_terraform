@@ -96,7 +96,7 @@ ghrelease_assets = rule(
             #allow_files = True,
         ),
         "_assets_runner": attr.label(
-            default = Label("//terraform/experimental/ghrelease/internal:assets_runner"),
+            default = Label("//experimental/ghrelease/internal:assets_runner"),
             executable = True,
             cfg = "host",
         ),
