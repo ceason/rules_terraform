@@ -8,6 +8,7 @@ def _get_valid_labels(ctx, embed_label):
     - //package:target                  ..whenever target and ctx are in the same workspace
     - :target                           ..whenever target and ctx are in the same workspace+package
     """
+
     # TODO(ceason): what is the canonical method for identifying external label? because this probably isn't it.
     valid = []
     tgt_in_different_workspace = False
@@ -25,29 +26,22 @@ def _get_valid_labels(ctx, embed_label):
         if ctx.workspace_name:
             valid += ["@%s//%s:%s" % (ctx.workspace_name, embed_label.package, embed_label.name)]
         if ctx.label.package == embed_label.package:
-            valid += [":" + dep.label.name]
+            valid += [":" + embed_label.name]
     return valid
 
 def _impl(ctx):
     """
     """
-    if len(ctx.attr.srcs) != 1:
-        fail("Must provide exactly one input", "srcs")
-    if len(ctx.attr.outs) != 1:
-        fail("Must provide exactly one output", "outs")
-
     container_pushes = []
     content_addressable_files = []
 
     args = ctx.actions.args()
-    out = ctx.outputs.outs[0]
-    inputs = [ctx.attr.srcs[0]]
-    args.add("--template", ctx.attr.srcs[0])
-    args.add("--output", out)
+    inputs = [ctx.file.src]
+    args.add("--template", ctx.file.src)
+    args.add("--output", ctx.outputs.out)
     requires_stamping = False
-    workspace_name
     for dep in ctx.attr.deps:
-        valid_labels = _get_valid_labels(ctx, dep)
+        valid_labels = _get_valid_labels(ctx, dep.label)
         if PushInfo in dep:
             container_pushes += [dep]
             p = dep[PushInfo]
@@ -75,29 +69,26 @@ def _impl(ctx):
 
     ctx.actions.run(
         inputs = inputs,
-        outputs = [out],
+        outputs = [ctx.outputs.out],
         arguments = [args],
         mnemonic = "EmbedContentAddressableReferences",
         executable = ctx.executable._embedder,
-        tools = ctx.attr._embedder.default_runfiles,
+        tools = ctx.attr._embedder.default_runfiles.files,
     )
-    return [
-        DefaultInfo(files = depset(direct = [out])),
-        EmbeddedContentInfo(
-            container_pushes = depset(direct = container_pushes),
-            content_addressable_files = depset(direct = content_addressable_files),
-        ),
-    ]
+    return [EmbeddedContentInfo(
+        container_pushes = depset(direct = container_pushes),
+        content_addressable_files = depset(direct = content_addressable_files),
+    )]
 
 embedded_reference = rule(
     _impl,
     attrs = {
-        "srcs": attr.label_list(
+        "src": attr.label(
             doc = "Single template file.",
             allow_single_file = True,
             mandatory = True,
         ),
-        "outs": attr.output_list(
+        "out": attr.output(
             doc = "Single output file.",
             mandatory = True,
         ),
@@ -110,7 +101,7 @@ embedded_reference = rule(
             mandatory = True,
         ),
         "_embedder": attr.label(
-            default = "//experimental/cas:embedder",
+            default = "//experimental/cas/internal:embedder",
             cfg = "host",
             executable = True,
         ),

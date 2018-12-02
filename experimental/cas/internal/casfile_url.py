@@ -1,8 +1,6 @@
 from __future__ import print_function
 
 import argparse
-import hashlib
-import os
 
 parser = argparse.ArgumentParser(
     fromfile_prefix_chars='@',
@@ -13,8 +11,12 @@ parser.add_argument(
     help='Prefix of url')
 
 parser.add_argument(
-    '--input', action='store', required=True,
-    help='The file.')
+    '--digest', action='store', required=True,
+    help='File containing digest.')
+
+parser.add_argument(
+    '--file_basename', action='store', required=True,
+    help='Name of file.')
 
 parser.add_argument(
     '--output', action='store', required=True,
@@ -22,19 +24,13 @@ parser.add_argument(
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    with open(args.input, "rb") as inputfile:
-        sha256 = hashlib.sha256()
-        while True:
-            data = inputfile.read(65536)
-            if not data:
-                break
-            sha256.update(data)
-    digest = sha256.hexdigest().lower()
-    url = "{prefix}/{xx}/{digest}/{basename}".format(
+    with open(args.digest, "r") as f:
+        digest = f.read().lower()
+    url = "{prefix}{xx}/{digest}/{basename}".format(
         prefix=args.url_prefix,
         xx=digest[:2],
         digest=digest,
-        basename=os.path.basename(args.input)
+        basename=args.file_basename
     )
     with open(args.output, "w") as out:
         out.write(url)

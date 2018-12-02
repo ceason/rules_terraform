@@ -67,9 +67,9 @@ def embed(args):
             replacement = f.read()
         for label in cas_file.valid_labels:
             if label in embeds:
-                raise Exception("Label '%s' already exists in embeds")
+                raise Exception("Label '%s' already exists in embeds" % label)
             embeds[label] = replacement
-    for image in args.image_spec:
+    for image in args.container_push:
         with open(image.digest_file, "r") as f:
             digest = f.read()
         replacement = "{registry}/{repository}@{digest}".format(
@@ -79,7 +79,7 @@ def embed(args):
         )
         for label in image.valid_labels:
             if label in embeds:
-                raise Exception("Label '%s' already exists in embeds")
+                raise Exception("Label '%s' already exists in embeds" % label)
             embeds[label] = replacement
     unseen_replacements = set(embeds.values())
 
@@ -92,15 +92,17 @@ def embed(args):
     if len(parts) < 2:
         raise ValueError("Could not find any embedded references within the template file.")
     output_content = io.BytesIO()
-    is_label = True
+    #print(parts)
+    is_label = False
     for s in parts:
         if is_label:
             is_label = False
             if s != "":
-                replacement = embeds.get(s.strip())
+                label = s.strip()
+                replacement = embeds.get(label)
                 if not replacement:
                     raise ValueError("No matching label found for '%s' referenced in template file. "
-                                     "Are you sure it's listed in deps?")
+                                     "Are you sure it's listed in deps?" % label)
                 unseen_replacements.discard(replacement)
                 output_content.write(replacement)
         else:
@@ -110,7 +112,7 @@ def embed(args):
         raise ValueError(
             "Unreferenced dependencies. Either reference them in the template, "
             "or remove them from deps (%s)" % unseen_replacements)
-    with open(args.output_file, "w") as f:
+    with open(args.output, "w") as f:
         f.write(output_content.getvalue())
 
 
@@ -121,4 +123,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        exit(1)
