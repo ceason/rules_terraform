@@ -1,5 +1,5 @@
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
-load(":providers.bzl", "ContentAddressableFileInfo", "EmbeddedContentInfo")
+load("//experimental/cas/internal:providers.bzl", "ContentAddressableFileInfo", "EmbeddedContentInfo")
 
 def _get_valid_labels(ctx, embed_label):
     """

@@ -8,6 +8,8 @@ load(
     _string_to_label = "string_to_label",
 )
 load(":terraform_lib.bzl", "create_launcher", "runfiles_path")
+load("//experimental/cas/internal:providers.bzl", "EmbeddedContentInfo", "ContentAddressableFileInfo")
+load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
 
 image_publisher_attrs = {
     "_image_embedder": attr.label(
@@ -61,7 +63,8 @@ def _image_publisher_aspect_impl(target, ctx):
             transitive_targets.append(target[PublishableTargetsInfo].targets)
 
     if ImagePublishInfo in target:
-        #print(target.label)
+        targets.append(target)
+    if EmbeddedContentInfo in target:
         targets.append(target)
 
     # recursively(ish?) go over all 'dir(ctx.rule.attr)'
@@ -110,6 +113,9 @@ def create_image_publisher(ctx, output, aspect_targets):
     transitive_runfiles = []
     image_specs = []
 
+    transitive_push_targets = []
+    transitive_cas_targets = []
+
     for t in aspect_targets:
         # TODO(ceason): identify file targets in a more robust way
         if PublishableTargetsInfo not in t and str(t).startswith("<input file"):
@@ -117,9 +123,15 @@ def create_image_publisher(ctx, output, aspect_targets):
         targets = t[PublishableTargetsInfo].targets
         if targets != None:
             for target in targets.to_list():
-                info = target[ImagePublishInfo]
-                transitive_runfiles.append(info.runfiles)
-                image_specs.extend(info.image_specs)
+                found_something = False
+                if ImagePublishInfo in target:
+                    info = target[ImagePublishInfo]
+                    transitive_runfiles.append(info.runfiles)
+                    image_specs.extend(info.image_specs)
+                if EmbeddedContentInfo in target:
+                    info = target[EmbeddedContentInfo]
+                    transitive_push_targets += [info.container_pushes]
+                    transitive_cas_targets += [info.content_addressable_files]
 
     # dedupe image specs
     image_specs = {k: None for k in image_specs}.keys()
@@ -128,6 +140,19 @@ def create_image_publisher(ctx, output, aspect_targets):
         json = _image_spec_json(ctx, spec, use_runfiles_path = True)
         args.extend(["--image_spec", json])
     args.append("publish")
+
+    # add push & cas targets args+runfiles
+    for t in  depset(transitive = transitive_cas_targets).to_list():
+        info = t[ContentAddressableFileInfo]
+        args += ["--cas_file", struct(
+            url_file = info.url.short_path,
+            file = info.file.short_path,
+        ).to_json()]
+    for t in depset(transitive = transitive_push_targets).to_list():
+        info = t[PushInfo]
+        transitive_runfiles += [t.default_runfiles.files]
+        runfiles += [t.files_to_run.executable]
+        args += ["--container_push", t.files_to_run.executable.short_path]
 
     args_file = ctx.actions.declare_file(output.basename + ".args", sibling = output)
     runfiles.append(args_file)
