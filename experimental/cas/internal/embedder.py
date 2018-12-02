@@ -92,7 +92,6 @@ def embed(args):
     if len(parts) < 2:
         raise ValueError("Could not find any embedded references within the template file.")
     output_content = io.BytesIO()
-    #print(parts)
     is_label = False
     for s in parts:
         if is_label:

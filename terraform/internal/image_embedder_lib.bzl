@@ -7,9 +7,9 @@ load(
     "@io_bazel_rules_docker//skylib:label.bzl",
     _string_to_label = "string_to_label",
 )
-load(":terraform_lib.bzl", "create_launcher", "runfiles_path")
-load("//experimental/cas/internal:providers.bzl", "EmbeddedContentInfo", "ContentAddressableFileInfo")
+load("//experimental/cas/internal:providers.bzl", "ContentAddressableFileInfo", "EmbeddedContentInfo")
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
+load("//terraform/internal:launcher.bzl", "create_launcher", "runfiles_path")
 
 image_publisher_attrs = {
     "_image_embedder": attr.label(
@@ -113,8 +113,7 @@ def create_image_publisher(ctx, output, aspect_targets):
     transitive_runfiles = []
     image_specs = []
 
-    transitive_push_targets = []
-    transitive_cas_targets = []
+    content_publishers = []
 
     for t in aspect_targets:
         # TODO(ceason): identify file targets in a more robust way
@@ -130,59 +129,27 @@ def create_image_publisher(ctx, output, aspect_targets):
                     image_specs.extend(info.image_specs)
                 if EmbeddedContentInfo in target:
                     info = target[EmbeddedContentInfo]
-                    transitive_push_targets += [info.container_pushes]
-                    transitive_cas_targets += [info.content_addressable_files]
+                    content_publishers += [info.content_publishers]
+    # flatten list of depsets to list of content
+    content_publishers = depset(transitive = content_publishers).to_list()
 
     # dedupe image specs
     image_specs = {k: None for k in image_specs}.keys()
-    args = []
+    args = [ctx.executable._image_embedder]
     for spec in image_specs:
         json = _image_spec_json(ctx, spec, use_runfiles_path = True)
         args.extend(["--image_spec", json])
     args.append("publish")
 
-    # add push & cas targets args+runfiles
-    for t in  depset(transitive = transitive_cas_targets).to_list():
-        info = t[ContentAddressableFileInfo]
-        args += ["--cas_file", struct(
-            url_file = info.url.short_path,
-            file = info.file.short_path,
-        ).to_json()]
-    for t in depset(transitive = transitive_push_targets).to_list():
-        info = t[PushInfo]
+    # add content publisher targets args+runfiles
+    for t in content_publishers:
         transitive_runfiles += [t.default_runfiles.files]
         runfiles += [t.files_to_run.executable]
-        args += ["--container_push", t.files_to_run.executable.short_path]
+        args += ["--content_publisher", t.files_to_run.executable]
 
-    args_file = ctx.actions.declare_file(output.basename + ".args", sibling = output)
-    runfiles.append(args_file)
+    create_launcher(ctx, output, args)
     runfiles.append(output)
-    ctx.actions.write(args_file, "\n".join(args))
-    ctx.actions.write(output, """#!/usr/bin/env bash
-                    set -euo pipefail
-                    if [[ -n "${TEST_SRCDIR-""}" && -d "$TEST_SRCDIR" ]]; then
-                      # use $TEST_SRCDIR if set.
-                      export RUNFILES="$TEST_SRCDIR"
-                    elif [[ -z "${RUNFILES-""}" ]]; then
-                      # canonicalize the entrypoint.
-                      pushd "$(dirname "$0")" > /dev/null
-                      abs_entrypoint="$(pwd -P)/$(basename "$0")"
-                      popd > /dev/null
-                      if [[ -e "${abs_entrypoint}.runfiles" ]]; then
-                        # runfiles dir found alongside entrypoint.
-                        export RUNFILES="${abs_entrypoint}.runfiles"
-                      elif [[ "$abs_entrypoint" == *".runfiles/"* ]]; then
-                        # runfiles dir found in entrypoint path.
-                        export RUNFILES="${abs_entrypoint%%.runfiles/*}.runfiles"
-                      else
-                        # runfiles dir not found: fall back on current directory.
-                        export RUNFILES="$PWD"
-                      fi
-                    fi
-                    exec "%s" "@%s" "$@" <&0
-                    """ % (ctx.executable._image_embedder.short_path, args_file.short_path), is_executable = True)
     transitive_runfiles.append(ctx.attr._image_embedder.default_runfiles.files)
-    transitive_runfiles.append(ctx.attr._image_embedder.data_runfiles.files)
 
     return depset(direct = runfiles, transitive = transitive_runfiles)
 

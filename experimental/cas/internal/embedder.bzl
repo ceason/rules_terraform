@@ -76,8 +76,9 @@ def _impl(ctx):
         tools = ctx.attr._embedder.default_runfiles.files,
     )
     return [EmbeddedContentInfo(
-        container_pushes = depset(direct = container_pushes),
-        content_addressable_files = depset(direct = content_addressable_files),
+        content_publishers = depset(
+            direct = container_pushes + content_addressable_files,
+        ),
     )]
 
 embedded_reference = rule(

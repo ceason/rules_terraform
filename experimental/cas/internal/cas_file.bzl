@@ -1,9 +1,12 @@
 load(":providers.bzl", "ContentAddressableFileInfo")
 load("@bazel_tools//tools/build_defs/hash:hash.bzl", "sha256", hash_tools = "tools")
+load("//terraform/internal:launcher.bzl", "create_launcher")
 
 def _impl(ctx):
     """
     """
+
+    # compute the URL where the file will be published
     url_prefix = ctx.expand_make_variables("url_prefix", ctx.attr.url_prefix, {})
     if not url_prefix.endswith("/"):
         url_prefix += "/"
@@ -13,16 +16,32 @@ def _impl(ctx):
     args.add("--digest", digest)
     args.add("--url_prefix", url_prefix)
     args.add("--output", ctx.outputs.out)
+    stamp_files = [ctx.info_file, ctx.version_file] if "{" in url_prefix else []
+    for f in stamp_files:
+        args.add("--stamp_info_file", f)
     ctx.actions.run(
-        inputs = [digest],
+        inputs = [digest] + stamp_files,
         outputs = [ctx.outputs.out],
         arguments = [args],
         mnemonic = "ComputeContentAddressableUrl",
         executable = ctx.executable._casfile_url,
         tools = ctx.attr._casfile_url.default_runfiles.files,
     )
+
+    # create pubisher executable
+    publisher_args = [ctx.executable._casfile_publisher]
+    publisher_args += ["--url", ctx.outputs.out]
+    publisher_args += ["--file", ctx.file.src]
+    create_launcher(ctx, ctx.outputs.executable, publisher_args)
+
+    runfiles = ctx.runfiles(files = [ctx.outputs.out, ctx.file.src])
+    runfiles = runfiles.merge(ctx.attr._casfile_publisher.default_runfiles)
     return [
-        DefaultInfo(files = depset(direct = [ctx.outputs.out])),
+        DefaultInfo(
+            files = depset(direct = [ctx.outputs.out]),
+            executable = ctx.outputs.executable,
+            runfiles = runfiles,
+        ),
         ContentAddressableFileInfo(
             file = ctx.file.src,
             url = ctx.outputs.out,
@@ -45,10 +64,15 @@ content_addressable_file = rule(
             default = Label("//experimental/cas/internal:casfile_url"),
             cfg = "host",
             executable = True,
-            allow_files = True,
+        ),
+        "_casfile_publisher": attr.label(
+            default = Label("//experimental/cas/internal:casfile_publisher"),
+            cfg = "host",
+            executable = True,
         ),
     },
     outputs = {
         "out": "%{name}.url",
     },
+    executable = True,
 )

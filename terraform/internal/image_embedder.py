@@ -5,6 +5,7 @@ import io
 import json
 import logging
 import os
+import subprocess
 from collections import namedtuple
 
 import httplib2
@@ -31,6 +32,10 @@ subparsers = parser.add_subparsers(dest="command")
 publish_parser = subparsers.add_parser(
     'publish',
     help="Publish referenced images")
+
+publish_parser.add_argument(
+    '--content_publisher', action='append', default=[],
+    help="Executable file, which when run, will publish content.")
 
 embed_parser = subparsers.add_parser(
     'embed',
@@ -188,6 +193,15 @@ def publish(args):
     for spec in args.image_spec:
         image = ImageSpec(spec)
         image.publish(transport)
+    completed = set()
+    for publisher in args.content_publisher:
+        if publisher in completed:
+            logging.debug("Skipping duplicate publisher '%s'", publisher)
+            continue
+        rc = subprocess.call([publisher])
+        completed.add(publisher)
+        if rc != 0:
+            exit(rc)
 
 
 def main():
@@ -199,7 +213,7 @@ def main():
     elif args.command == "publish":
         publish(args)
     else:
-        raise Exception("Unknown command '%s'" % args.command)
+        raise ValueError("Unknown command '%s'" % args.command)
 
 
 if __name__ == '__main__':

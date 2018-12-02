@@ -21,7 +21,7 @@ container_push(
 content_addressable_file(
     name = "big_file_url",
     src = "some-really-big-file",
-    url_prefix = "s3://whatever-bucket-name",
+    url_prefix = "s3://whatever-bucket-name/{BUILD_USER}",
 )
 
 embedded_reference(
