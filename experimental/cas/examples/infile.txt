@@ -1,0 +1,10 @@
+docker image is
+- {{embedded_reference :push_image}}
+- {{embedded_reference //experimental/cas/examples:push_image}}
+- {{embedded_reference //experimental/cas/examples:push_image  }}
+- {{ embedded_reference //experimental/cas/examples:push_image  }}
+
+published file is
+- {{embedded_reference :published_jar}}
+- {{embedded_reference //experimental/cas/examples:published_jar}}
+- {{  embedded_reference @rules_terraform//experimental/cas/examples:published_jar  }}

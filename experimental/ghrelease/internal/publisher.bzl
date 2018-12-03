@@ -101,11 +101,16 @@ ghrelease = rule(
             ],
         ),
         "version": attr.string(mandatory = True),
+        "semver_env_var": attr.string(
+            default = "GHRELEASE_SEMVER",
+            # TODO(ceason): implement this
+            doc = "UNIMPLEMENTED. Expose the SEMVER via this environment variable (eg for use in stamping via --workspace_status_command).",
+        ),
         "branch": attr.string(default = "master"),
         "docs_branch": attr.string(default = "docs"),
         "docs": attr.label_list(default = [], allow_files = True),
         "_publisher_runner": attr.label(
-            default = Label("//terraform/experimental/ghrelease/internal:publisher_runner"),
+            default = Label("//experimental/ghrelease/internal:publisher_runner"),
             executable = True,
             cfg = "host",
         ),

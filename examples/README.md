@@ -93,7 +93,7 @@ build:publish --define IMAGE_CHROOT=index.docker.io/netchris
 
 ### [`release/BUILD`](release/BUILD)
 ```python
-load("//terraform/experimental/ghrelease:def.bzl", "ghrelease", "ghrelease_assets", "ghrelease_test_suite")
+load("//experimental/ghrelease:def.bzl", "ghrelease", "ghrelease_assets", "ghrelease_test_suite")
 
 VERSION = "0.2"
 

@@ -102,7 +102,7 @@ def terraform_workspace(name, modules = {}, **kwargs):
             set -euo pipefail
             terraform="$$BUILD_WORKSPACE_DIRECTORY/{package}/{tf_workspace_files_prefix}/.terraform/terraform.sh"
             if [ -e "$$terraform" ]; then
-                exec "$$terraform" destroy "$$@"
+                exec "$$terraform" destroy "$$@" <&0
             else
                 >&2 echo "Could not find terraform wrapper, so there is nothing to destroy! ($$terraform)"
             fi
@@ -112,3 +112,4 @@ def terraform_workspace(name, modules = {}, **kwargs):
         ),
         executable = True,
     )
+    # TODO(ceason): create 'apply' wrapper?
