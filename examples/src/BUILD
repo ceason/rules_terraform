@@ -20,18 +20,23 @@ container_push(
     tag = "dev",
 )
 
+embedded_reference(
+    name = "k8s-server-yaml",
+    src = "server.yaml.tpl",
+    out = "server.yaml",
+    deps = [
+        ":push_py_image",
+    ],
+)
+
 terraform_k8s_manifest(
     name = "k8s-deployment",
-    srcs = ["server.yaml"],
-    image_chroot = "$(IMAGE_CHROOT)",
-    images = {
-        "hello-world-server:dev": ":py_image",
-    },
+    srcs = [":k8s-server-yaml"],
 )
 
 embedded_reference(
     name = "ecs-task-containers",
-    src = "ecs-task-containers.tpl.json",
+    src = "ecs-task-containers.json.tpl",
     out = "ecs-task-containers.json",
     deps = [
         ":push_py_image",
@@ -54,8 +59,9 @@ terraform_module(
         "ecs.tf",
         "ecs-plumbing.tf",
         "main.tf",
+    ],
+    data = [
         ":ecs-task-containers",
     ],
-    #embed = [":ecs-task-containers"],
     visibility = ["//visibility:public"],
 )
