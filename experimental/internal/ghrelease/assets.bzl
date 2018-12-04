@@ -1,4 +1,4 @@
-load("//terraform/internal:image_embedder_lib.bzl", "create_image_publisher", "image_publisher_aspect", "image_publisher_attrs")
+load("//terraform/internal:content_publisher.bzl", "create_content_publisher", "content_publisher_aspect", "content_publisher_attrs")
 
 GhReleaseAssetsInfo = provider(
     fields = {
@@ -47,7 +47,7 @@ def _impl(ctx):
     # create an image publisher
     image_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
     files.append(image_publisher)
-    publisher_runfiles = create_image_publisher(ctx, image_publisher, ctx.attr.data)
+    publisher_runfiles = create_content_publisher(ctx, image_publisher, ctx.attr.data)
 
     config_file = ctx.actions.declare_file(ctx.attr.name + ".config.json")
     files.append(config_file)
@@ -87,12 +87,12 @@ def _impl(ctx):
 
 ghrelease_assets = rule(
     _impl,
-    attrs = image_publisher_attrs + {
+    attrs = content_publisher_attrs + {
         "bazel_flags": attr.string_list(default = []),
         "env": attr.string_dict(default = {}),
         "data": attr.label_list(
             default = [],
-            aspects = [image_publisher_aspect],
+            aspects = [content_publisher_aspect],
             #allow_files = True,
         ),
         "_assets_runner": attr.label(

@@ -1,58 +1,64 @@
-load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo", "tf_workspace_files_prefix")
+load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
 
-def _module_impl(ctx, bundle_file = None):
-    """
-    """
-    runfiles = []
-    transitive_runfiles = []
+_module_attrs = {
+    "srcs": attr.label_list(
+        allow_files = [".tf"],
+    ),
+    "data": attr.label_list(
+        allow_files = True,
+    ),
+    "embed": attr.label_list(
+        doc = "Merge the content of other <terraform_module>s (or other 'ModuleInfo' providing deps) into this one.",
+        providers = [TerraformModuleInfo],
+    ),
+    "deps": attr.label_list(
+        providers = [TerraformModuleInfo],
+    ),
+    "plugins": attr.label_list(
+        doc = "Custom Terraform plugins that this module requires.",
+        providers = [TerraformPluginInfo],
+    ),
+    "modulepath": attr.string(),
+}
 
-    transitive_plugins = []
-    bundle_inputs = []
+module_outputs = {
+    "out": "%{name}.tar.gz",
+    "docs_md": "%{name}_docs.md",
+    "docs_json": "%{name}_docs.json",
+}
 
-    #bundle_file = ctx.actions.declare_file(ctx.attr.name + ".bundle.tar")
-    bundle_file = ctx.outputs.out
-    bundle_args = ctx.actions.args()
-    bundle_args.add("--output", bundle_file)
+module_tool_attrs = {
+    "_terraform_docs": attr.label(
+        default = Label("@tool_terraform_docs"),
+        executable = True,
+        cfg = "host",
+    ),
+    "_resolve_srcs": attr.label(
+        default = Label("//terraform/internal:resolve_srcs"),
+        executable = True,
+        cfg = "host",
+    ),
+    "_create_root_bundle": attr.label(
+        default = Label("//terraform/internal:create_root_bundle"),
+        executable = True,
+        cfg = "host",
+    ),
+}
 
-    # aggregate files
-    for f in ctx.files.srcs:
-        label = f.owner or ctx.label
-        prefix = label.package + "/"
-        path = f.short_path[len(prefix):]
-        bundle_args.add_all("--file", [path, f])
-        bundle_inputs.append(f)
+def _collect_srcs(ctx):
+    fail("Unimplemented")
 
-    for dep in ctx.attr.embed:
-        mi = dep[ModuleInfo]
-        if hasattr(mi, "plugins"):
-            transitive_plugins.append(mi.plugins)
-        if hasattr(mi, "tar"):
-            bundle_inputs.append(mi.tar)
-            bundle_args.add_all("--embed", [".", mi.tar])
+def _collect_data(ctx):
+    fail("Unimplemented")
 
-    for m, module_name in ctx.attr.modules.items():
-        mi = m[ModuleInfo]
-        if hasattr(mi, "plugins"):
-            transitive_plugins.append(mi.plugins)
-        if hasattr(mi, "tar"):
-            bundle_inputs.append(mi.tar)
-            bundle_args.add_all("--embed", [module_name, mi.tar])
+def _collect_plugins(ctx):
+    fail("Unimplemented")
 
-    ctx.actions.run(
-        inputs = bundle_inputs,
-        outputs = [bundle_file],
-        arguments = [bundle_args],
-        executable = ctx.executable._bundle_tool,
-    )
+def _collect_deps(ctx):
+    fail("Unimplemented")
 
-    # todo: validate that no files (src or embedded) collide with 'modules' attribute (eg module is
-    # only thing allowed to populate its subpath)
-
-    module_info = ModuleInfo(
-        tar = bundle_file,
-        plugins = depset(direct = ctx.attr.plugins or [], transitive = transitive_plugins),
-    )
-
+def _generate_docs(ctx, srcs, md_output = None, json_output = None):
+    fail("Unimplemented")
     ctx.actions.run_shell(
         inputs = [
             ctx.outputs.out,
@@ -68,17 +74,70 @@ def _module_impl(ctx, bundle_file = None):
             ctx.outputs.docs_json.path,
         ],
         command = """#!/usr/bin/env bash
-set -euo pipefail
-terraform_docs="%s"
-module_dir=$(mktemp -d)
-tar -xf "$1" -C "$module_dir"
-$terraform_docs --sort-inputs-by-required md   "$module_dir" > "$2"
-$terraform_docs --sort-inputs-by-required json "$module_dir" > "$3"
-rm -rf "$module_dir"
-        """ % ctx.executable._terraform_docs.path,
+    set -euo pipefail
+    terraform_docs="%s"
+    module_dir=$(mktemp -d)
+    tar -xf "$1" -C "$module_dir"
+    $terraform_docs --sort-inputs-by-required md   "$module_dir" > "$2"
+    $terraform_docs --sort-inputs-by-required json "$module_dir" > "$3"
+    rm -rf "$module_dir"
+            """ % ctx.executable._terraform_docs.path,
         tools = ctx.attr._terraform_docs.default_runfiles.files,
     )
 
+def _resolve_srcs(
+        ctx,
+        module_resolved_srcs_output = None,
+        root_resolved_srcs_output = None):
+    fail("Unimplemented")
+
+def _create_root_bundle(ctx, output, module_info):
+    fail("Unimplemented")
+
+def module_impl(ctx, modulepath = None):
+    """
+    """
+    modulepath = modulepath or ctx.attr.modulepath or ctx.attr.name
+
+    # collect & resolve sources
+    srcs = _collect_srcs(ctx)
+    module_resolved_srcs = ctx.actions.declare_file(ctx.attr.name + ".module-srcs.tar")
+    root_resolved_srcs = ctx.actions.declare_file(ctx.attr.name + ".root-srcs.tar")
+    _resolve_srcs(
+        ctx,
+        module_resolved_srcs_output = module_resolved_srcs,
+        root_resolved_srcs_output = root_resolved_srcs,
+    )
+
+    # generate docs from sources
+    _generate_docs(
+        ctx,
+        srcs,
+        md_output = ctx.outputs.docs_md,
+        json_output = ctx.outputs.docs_json,
+    )
+
+    # collect files & add generated docs
+    file_map, file_tars = _collect_data(ctx)
+    file_map["README.md"] = ctx.outputs.docs_md
+
+    # collect modules, plugins & we can finally create our TerraformModuleInfo!
+    modules = _collect_deps(ctx)
+    plugins = _collect_plugins(ctx)
+    module_info = TerraformModuleInfo(
+        modulepath = modulepath,
+        srcs = srcs,
+        resolved_srcs = module_resolved_srcs,
+        file_map = file_map,
+        file_tars = file_tars,
+        plugins = plugins,
+        modules = modules,
+    )
+
+    # create the "root module bundle" by providing our module_info
+    _create_root_bundle(ctx, ctx.outputs.out, module_info)
+
+    # return our module_info on a struct so other things can use it
     return struct(
         terraform_module_info = module_info,
         providers = [
@@ -88,73 +147,8 @@ rm -rf "$module_dir"
         ],
     )
 
-def _module_attrs(aspects = []):
-    return {
-        "srcs": attr.label_list(
-            allow_files = True,
-            aspects = aspects,
-        ),
-        "embed": attr.label_list(
-            doc = "Merge the content of other <terraform_module>s (or other 'ModuleInfo' providing deps) into this one.",
-            providers = [ModuleInfo],
-            aspects = aspects,
-        ),
-        "modules": attr.label_keyed_string_dict(
-            providers = [ModuleInfo],
-            aspects = aspects,
-        ),
-        "plugins": attr.label_list(
-            doc = "Custom Terraform plugins that this module requires.",
-            providers = [PluginInfo],
-        ),
-        "_bundle_tool": attr.label(
-            default = Label("//terraform/internal:bundle"),
-            executable = True,
-            cfg = "host",
-        ),
-        "_terraform_docs": attr.label(
-            default = Label("@tool_terraform_docs"),
-            executable = True,
-            cfg = "host",
-        ),
-    }
-
-module = struct(
-    implementation = _module_impl,
-    attributes = _module_attrs,
-    outputs = {
-        "out": "%{name}.tar",
-        "docs_md": "%{name}_docs.md",
-        "docs_json": "%{name}_docs.json",
-    },
+terraform_module = rule(
+    module_impl,
+    attrs = module_tool_attrs + _module_attrs,
+    outputs = module_outputs,
 )
-
-_terraform_module = rule(
-    implementation = module.implementation,
-    attrs = module.attributes(),
-    outputs = module.outputs,
-)
-
-def flip_modules_attr(modules):
-    """
-    Translate modules attr from a 'name=>label' dict to 'label=>name'
-    """
-    flipped = {}
-    for name, label in modules.items():
-        if not (label.startswith("@") or label.startswith("//") or label.startswith(":")):
-            fail("Modules are now specified as 'name=>label'", attr = "modules")
-
-        # append package path & workspace name as necessary
-        abs_label = "//" + native.package_name() + label if label.startswith(":") else label
-        abs_label = native.repository_name() + abs_label if abs_label.startswith("//") else abs_label
-        if abs_label in flipped:
-            fail("Modules may only be specified once (%s)" % label, attr = "modules")
-        flipped[abs_label] = name
-    return flipped
-
-def terraform_module(name, modules = {}, **kwargs):
-    _terraform_module(
-        name = name,
-        modules = flip_modules_attr(modules),
-        **kwargs
-    )

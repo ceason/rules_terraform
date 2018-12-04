@@ -11,30 +11,19 @@ py_binary(
 )
 
 py_binary(
+    name = "create_root_bundle",
+    srcs = ["create_root_bundle.py"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "resolve_srcs",
+    srcs = ["resolve_srcs.py"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
     name = "bundle",
     srcs = ["bundle.py"],
     visibility = ["//visibility:public"],
-)
-
-py_binary(
-    name = "stamper",
-    srcs = ["stamper.py"],
-    visibility = ["//visibility:public"],
-)
-
-py_binary(
-    name = "image_embedder",
-    srcs = ["image_embedder.py"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@containerregistry",
-        "@yaml",
-    ],
-)
-
-py_binary(
-    name = "k8s_manifest",
-    srcs = ["k8s_manifest.py"],
-    visibility = ["//visibility:public"],
-    deps = ["@yaml"],
 )

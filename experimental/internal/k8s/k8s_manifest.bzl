@@ -1,5 +1,5 @@
 load("//terraform:providers.bzl", "ModuleInfo")
-load("//terraform/internal:image_embedder_lib.bzl", "embed_images", "image_embedder_attrs", "runfiles_path")
+load("//terraform/internal:content_publisher.bzl", "embed_images", "image_embedder_attrs", "runfiles_path")
 load("//terraform/internal:terraform_lib.bzl", "create_launcher")
 
 def _terraform_k8s_manifest_impl(ctx):

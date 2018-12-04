@@ -1,51 +1,77 @@
-load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo", "tf_workspace_files_prefix")
-load(":module.bzl", "flip_modules_attr", _module = "module")
+load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
+load(":module.bzl", "module_impl", "module_outputs", "module_tool_attrs")
 load(":terraform_lib.bzl", "create_launcher")
 load(
-    "//terraform/internal:image_embedder_lib.bzl",
-    "create_image_publisher",
-    "image_publisher_aspect",
-    "image_publisher_attrs",
-    _embed_images = "embed_images",
+    "//terraform/internal:content_publisher.bzl",
+    "content_publisher_aspect",
+    "content_publisher_attrs",
+    "create_content_publisher",
 )
 
-def _impl(ctx):
-    providers = []
-    runfiles = []
-    transitive_runfiles = []
+_workspace_attrs = {
+    "srcs": attr.label_list(
+        allow_files = [".tf", ".tfvars"],
+        aspects = [content_publisher_aspect],
+    ),
+    "embed": attr.label_list(
+        doc = "Merge the content of other <terraform_module>s (or other 'ModuleInfo' providing deps) into this one.",
+        providers = [TerraformModuleInfo],
+        aspects = [content_publisher_aspect],
+    ),
+    "deps": attr.label_list(
+        providers = [TerraformModuleInfo],
+        aspects = [content_publisher_aspect],
+    ),
+    "data": attr.label_list(
+        allow_files = True,
+        aspects = [content_publisher_aspect],
+    ),
+    "plugins": attr.label_list(
+        doc = "Custom Terraform plugins that this workspace requires.",
+        providers = [TerraformPluginInfo],
+    ),
+    "_workspace_launcher_template": attr.label(
+        allow_single_file = True,
+        default = "//terraform/internal:ws_launcher.sh.tpl",
+    ),
+    "_terraform_workspace_renderer": attr.label(
+        default = Label("//terraform/internal:render_workspace"),
+        executable = True,
+        cfg = "host",
+    ),
+}
 
-    module = _module.implementation(ctx).terraform_module_info
-    providers.append(module)
+def _workspace_impl(ctx):
+    # get our module info
+    module_info = module_impl(ctx, modulepath = ctx.attr.name).terraform_module_info
 
-    image_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
-    runfiles.append(image_publisher)
-
-    #    for f in ctx.attr.srcs:
-    #        print("%s: %s" % (type(f), f))
-    transitive_runfiles.append(create_image_publisher(
+    # create content publisher from aspect-instrumented targets
+    content_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
+    runfiles = create_content_publisher(
         ctx,
-        image_publisher,
-        ctx.attr.srcs + ctx.attr.embed + ctx.attr.modules.keys(),
-    ))
+        content_publisher,
+        ctx.attr.srcs + ctx.attr.embed + ctx.attr.deps + ctx.attr.data,
+    )
+
+    files = []
 
     # bundle the renderer with args for the content of this tf module
     render_workspace = ctx.actions.declare_file("%s.render-workspace" % ctx.attr.name)
-    renderer_args = []
-    renderer_args.append(ctx.executable._terraform_workspace_renderer)
-    transitive_runfiles.append(ctx.attr._terraform_workspace_renderer.default_runfiles.files)
-    transitive_runfiles.append(ctx.attr._terraform_workspace_renderer.data_runfiles.files)
-    renderer_args.extend(["--prerender_hook", image_publisher])
-    renderer_args.extend(["--tfroot_archive", module.tar])
-    runfiles.append(module.tar)
+    runfiles = runfiles.merge(ctx.attr._terraform_workspace_renderer.default_runfiles)
+    renderer_args = [ctx.executable._terraform_workspace_renderer]
+    renderer_args += ["--prerender_hook", content_publisher]
+    renderer_args += ["--tfroot_archive", ctx.outputs.out]
+    files += [ctx.outputs.out]
     for p in module.plugins.to_list():
-        plugin = p[PluginInfo]
+        plugin = p[TerraformPluginInfo]
         for filename, file in plugin.files.items():
-            renderer_args.extend(["--plugin_file", filename, file])
-            runfiles.append(file)
+            renderer_args += ["--plugin_file", filename, file]
+            files += [file]
 
     create_launcher(ctx, render_workspace, renderer_args)
-    runfiles.append(render_workspace)
+    files += [render_workspace]
 
+    # create the workspace launcher
     ctx.actions.expand_template(
         template = ctx.file._workspace_launcher_template,
         output = ctx.outputs.executable,
@@ -57,41 +83,25 @@ def _impl(ctx):
             ),
         },
     )
-    return providers + [
-        WorkspaceInfo(
-            render_workspace = render_workspace,
-        ),
-        DefaultInfo(
-            runfiles = ctx.runfiles(
-                files = runfiles,
-                transitive_files = depset(transitive = transitive_runfiles),
-            ),
-        ),
+    runfiles = runfiles.merge(ctx.runfiles(files = files))
+    return [
+        TerraformWorkspaceInfo(render_workspace = render_workspace),
+        DefaultInfo(runfiles = runfiles, executable = ctx.outputs.executable),
     ]
 
 _terraform_workspace = rule(
-    _impl,
+    _workspace_impl,
     executable = True,
-    attrs = _module.attributes([image_publisher_aspect]) + image_publisher_attrs + {
-        "_workspace_launcher_template": attr.label(
-            allow_single_file = True,
-            default = "//terraform/internal:ws_launcher.sh.tpl",
-        ),
-        "_terraform_workspace_renderer": attr.label(
-            default = Label("//terraform/internal:render_workspace"),
-            executable = True,
-            cfg = "host",
-        ),
-    },
-    outputs = _module.outputs,
+    attrs = module_tool_attrs + content_publisher_attrs + _workspace_attrs,
+    outputs = module_outputs,
 )
 
-def terraform_workspace(name, modules = {}, **kwargs):
+def terraform_workspace(name, **kwargs):
     _terraform_workspace(
         name = name,
-        modules = flip_modules_attr(modules),
         **kwargs
     )
+    # TODO(ceason): create 'apply' wrapper?
 
     # create a convenient destroy target which
     # CDs to the package dir and runs terraform destroy
@@ -112,4 +122,3 @@ def terraform_workspace(name, modules = {}, **kwargs):
         ),
         executable = True,
     )
-    # TODO(ceason): create 'apply' wrapper?

@@ -102,12 +102,7 @@ py_library(
 )
 """,
     )
-    _maybe(
-        git_repository,
-        name = "io_bazel_rules_docker",
-        commit = "ff03d2b2800641bdd407bc89823c84b96aa0b15a",
-        remote = "https://github.com/ceason/rules_docker.git",
-    )
+
 
 def _maybe(rule, **kwargs):
     if kwargs["name"] not in native.existing_rules():

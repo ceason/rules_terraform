@@ -1,4 +1,4 @@
-package experimental.cas.examples;
+package examples.publishing;
 
 public class HelloWorld {
 

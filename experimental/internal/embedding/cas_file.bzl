@@ -49,7 +49,7 @@ def _impl(ctx):
     ]
 
 #
-content_addressable_file = rule(
+file_upload = rule(
     _impl,
     attrs = hash_tools + {
         "src": attr.label(
