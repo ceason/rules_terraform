@@ -1,9 +1,8 @@
-load("providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
+load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
 load("//terraform/internal:terraform_lib.bzl", "create_terraform_renderer", "runfiles_path", "tf_renderer_attrs")
 load(
-    "//terraform/internal:content_publisher.bzl",
+    "//experimental/internal/embedding:content_publisher.bzl",
     _create_image_publisher = "create_content_publisher",
-    _embed_images = "embed_images",
     _image_publisher_aspect = "content_publisher_aspect",
     _image_publisher_attrs = "content_publisher_attrs",
 )

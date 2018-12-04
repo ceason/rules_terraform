@@ -1,5 +1,5 @@
-load("providers.bzl", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
-load("//terraform/internal:content_publisher.bzl", "create_content_publisher", "content_publisher_aspect", "content_publisher_attrs")
+load(":providers.bzl", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
+load("//experimental/internal/embedding:content_publisher.bzl", "create_content_publisher", "content_publisher_aspect", "content_publisher_attrs")
 
 def _integration_test_impl(ctx):
     """

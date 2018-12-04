@@ -1,4 +1,4 @@
-load(":providers.bzl", "ContentAddressableFileInfo")
+load("//experimental/internal:providers.bzl", "ContentPublisherInfo")
 load("@bazel_tools//tools/build_defs/hash:hash.bzl", "sha256", hash_tools = "tools")
 load("//terraform/internal:launcher.bzl", "create_launcher")
 
@@ -42,9 +42,8 @@ def _impl(ctx):
             executable = ctx.outputs.executable,
             runfiles = runfiles,
         ),
-        ContentAddressableFileInfo(
-            file = ctx.file.src,
-            url = ctx.outputs.out,
+        ContentPublisherInfo(
+            published_location = ctx.outputs.out,
         ),
     ]
 

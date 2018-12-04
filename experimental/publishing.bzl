@@ -1,6 +1,6 @@
-load("//experimental/ghrelease/internal:publisher.bzl", "ghrelease")
-load("//experimental/ghrelease/internal:assets.bzl", "ghrelease_assets")
-load("//experimental/ghrelease/internal:test_suite.bzl", "ghrelease_test_suite")
-load("//experimental/cas/internal:cas_file.bzl", "file_upload")
-load("//experimental/cas/internal:embedder.bzl", "embedded_reference")
+load("//experimental/internal/ghrelease:publisher.bzl", "ghrelease")
+load("//experimental/internal/ghrelease:assets.bzl", "ghrelease_assets")
+load("//experimental/internal/ghrelease:test_suite.bzl", "ghrelease_test_suite")
+load("//experimental/internal/embedding:cas_file.bzl", "file_upload")
+load("//experimental/internal/embedding:embedder.bzl", "embedded_reference")
 

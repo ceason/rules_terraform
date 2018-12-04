@@ -110,7 +110,7 @@ ghrelease = rule(
         "docs_branch": attr.string(default = "docs"),
         "docs": attr.label_list(default = [], allow_files = True),
         "_publisher_runner": attr.label(
-            default = Label("//experimental/ghrelease/internal:publisher_runner"),
+            default = Label("//experimental/internal/ghrelease:publisher_runner"),
             executable = True,
             cfg = "host",
         ),

@@ -1,5 +1,5 @@
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
-load("//experimental/cas/internal:providers.bzl", "ContentAddressableFileInfo", "EmbeddedContentInfo")
+load("//experimental/internal:providers.bzl", "EmbeddedContentInfo", "ContentPublisherInfo")
 
 def _get_valid_labels(ctx, embed_label):
     """
@@ -32,8 +32,7 @@ def _get_valid_labels(ctx, embed_label):
 def _impl(ctx):
     """
     """
-    container_pushes = []
-    content_addressable_files = []
+    content_publishers = []
 
     args = ctx.actions.args()
     inputs = [ctx.file.src]
@@ -42,6 +41,17 @@ def _impl(ctx):
     requires_stamping = False
     for dep in ctx.attr.deps:
         valid_labels = _get_valid_labels(ctx, dep.label)
+        if ContentPublisherInfo in dep:
+            content_publishers += [dep]
+            # TODO: make sure target is executable & fail early if it's not
+            info = dep[ContentPublisherInfo]
+            inputs += [info.published_location]
+            args.add("--content_addressable_file", struct(
+                label = str(ctx.label),
+                valid_labels = valid_labels,
+                published_location_file = info.published_location,
+            ).to_json())
+        # TODO: move this to "container_push wrapper"
         if PushInfo in dep:
             container_pushes += [dep]
             p = dep[PushInfo]
@@ -54,14 +64,8 @@ def _impl(ctx):
             ).to_json())
             if "{" in p.registry or "{" in p.repository:
                 requires_stamping = True
-        if ContentAddressableFileInfo in dep:
-            content_addressable_files += [dep]
-            info = dep[ContentAddressableFileInfo]
-            inputs += [info.url]
-            args.add("--content_addressable_file", struct(
-                valid_labels = valid_labels,
-                url_file = info.url.path,
-            ).to_json())
+
+    # TODO: move this to "container_push wrapper"
     if requires_stamping:
         inputs += [ctx.info_file, ctx.version_file]
         args.add("--stamp_info_file", ctx.info_file)
@@ -76,9 +80,7 @@ def _impl(ctx):
         tools = ctx.attr._embedder.default_runfiles.files,
     )
     return [EmbeddedContentInfo(
-        content_publishers = depset(
-            direct = container_pushes + content_addressable_files,
-        ),
+        content_publishers = depset(direct = content_publishers),
     )]
 
 embedded_reference = rule(
@@ -97,7 +99,7 @@ embedded_reference = rule(
             doc = "Embeddable targets (eg container_push, content_addressable_file, etc).",
             providers = [
                 [PushInfo],
-                [ContentAddressableFileInfo],
+                [ContentPublisherInfo],
             ],
             mandatory = True,
         ),

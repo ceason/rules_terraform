@@ -2,7 +2,7 @@ load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformW
 load(":module.bzl", "module_impl", "module_outputs", "module_tool_attrs")
 load(":terraform_lib.bzl", "create_launcher")
 load(
-    "//terraform/internal:content_publisher.bzl",
+    "//experimental/internal/embedding:content_publisher.bzl",
     "content_publisher_aspect",
     "content_publisher_attrs",
     "create_content_publisher",
@@ -62,7 +62,7 @@ def _workspace_impl(ctx):
     renderer_args += ["--prerender_hook", content_publisher]
     renderer_args += ["--tfroot_archive", ctx.outputs.out]
     files += [ctx.outputs.out]
-    for p in module.plugins.to_list():
+    for p in module_info.plugins.to_list():
         plugin = p[TerraformPluginInfo]
         for filename, file in plugin.files.items():
             renderer_args += ["--plugin_file", filename, file]

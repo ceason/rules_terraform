@@ -1,4 +1,4 @@
-load("providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
+load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
 load("//terraform/internal:launcher.bzl", "create_launcher", "runfiles_path")
 
 def create_terraform_renderer(ctx, output, module_info):

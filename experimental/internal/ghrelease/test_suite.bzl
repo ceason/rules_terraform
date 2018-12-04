@@ -50,7 +50,7 @@ ghrelease_test_suite = rule(
         "env": attr.string_dict(default = {}),
         "tests": attr.string_list(default = []),
         "_test_suite_runner": attr.label(
-            default = Label("//experimental/ghrelease/internal:test_suite_runner"),
+            default = Label("//experimental/internal/ghrelease:test_suite_runner"),
             executable = True,
             cfg = "host",
         ),

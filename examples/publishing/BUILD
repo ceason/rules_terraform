@@ -1,6 +1,6 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 load("@io_bazel_rules_docker//python:image.bzl", python_base_image = "DEFAULT_BASE")
-load("//experimental/cas:def.bzl", "file_upload", "embedded_reference")
+load("//experimental:publishing.bzl", "file_upload", "embedded_reference")
 #
 #py_image(
 #    name = "py_image",
@@ -24,7 +24,7 @@ java_binary(
     main_class = "experimental.cas.examples.HelloWorld",
 )
 
-published_file(
+file_upload(
     name = "published_jar",
     src = ":HelloWorld_deploy.jar",
     url_prefix = "s3://$(S3_BUCKET)/asdf/{BUILD_USER}",

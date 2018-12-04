@@ -1,4 +1,4 @@
-load("//experimental/cas/internal:providers.bzl", "ContentAddressableFileInfo", "EmbeddedContentInfo")
+load("//experimental/internal:providers.bzl", "EmbeddedContentInfo")
 load("//terraform/internal:launcher.bzl", "create_launcher", "runfiles_path")
 
 content_publisher_attrs = {}

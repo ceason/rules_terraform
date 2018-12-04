@@ -1,4 +1,4 @@
-load("//terraform/internal:content_publisher.bzl", "create_content_publisher", "content_publisher_aspect", "content_publisher_attrs")
+load("//experimental/internal/embedding:content_publisher.bzl", "create_content_publisher", "content_publisher_aspect", "content_publisher_attrs")
 
 GhReleaseAssetsInfo = provider(
     fields = {
@@ -96,7 +96,7 @@ ghrelease_assets = rule(
             #allow_files = True,
         ),
         "_assets_runner": attr.label(
-            default = Label("//experimental/ghrelease/internal:assets_runner"),
+            default = Label("//experimental/internal/ghrelease:assets_runner"),
             executable = True,
             cfg = "host",
         ),
