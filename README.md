@@ -16,4 +16,4 @@ terraform_repositories()
 
 ### Usage Examples
 - [`//examples`](examples/)
-- [`//experimental/examples/cas/BUILD`](experimental/examples/cas/BUILD)
+- [`//experimental/examples/cas/BUILD`](experimental/cas/examples/BUILD)
