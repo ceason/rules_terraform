@@ -8,7 +8,7 @@ data aws_subnet_ids default_vpc {
 
 
 module hello_world {
-  source                = "./module"
+  source                = "@rules_terraform//examples/src:hello-world_ecs"
   custom_server_message = "${local.test_message}"
   subnet_ids            = ["${data.aws_subnet_ids.default_vpc.ids}"]
 }

@@ -64,7 +64,7 @@ def main(args):
 
     # iterate over input files & write to output
     root_resolved_output = tarfile.open(args.root_resolved_output, "w")
-    module_resolved_output = tarfile.open(args.root_resolved_output, "w")
+    module_resolved_output = tarfile.open(args.module_resolved_output, "w")
 
     seen_srcs = set()
 
@@ -96,8 +96,8 @@ def main(args):
                                  "Are you sure it's listed as a dependency?" % label)
             unseen_replacements.discard(modulepath)
             # TODO: make this work when modulepath has multiple path components (eg "path/to/my/module")
-            module_replacement = '"../%s"' % modulepath
-            root_replacement = '"./modules/%s"' % modulepath
+            module_replacement = str('"../%s"' % modulepath)
+            root_replacement = str('"./modules/%s"' % modulepath)
 
             root_output.write(root_replacement)
             root_output.write(suffix)

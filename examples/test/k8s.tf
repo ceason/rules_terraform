@@ -1,5 +1,5 @@
 module hello_world {
-  source                = "./module"
+  source                = "//examples/src:hello-world_k8s"
   custom_server_message = "${local.test_message}"
 }
 
