@@ -1,1 +1,0 @@
-load("//experimental/internal/embedding:container_push.bzl", "container_push")

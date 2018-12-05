@@ -1,5 +1,5 @@
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
-load("//experimental/internal:providers.bzl", "EmbeddedContentInfo", "ContentPublisherInfo")
+load("//experimental/internal:providers.bzl", "EmbeddedContentInfo", "FileUploaderInfo")
 
 def _get_valid_labels(ctx, embed_label):
     """
@@ -33,6 +33,7 @@ def _impl(ctx):
     """
     """
     content_publishers = []
+    container_pushes = []
 
     args = ctx.actions.args()
     inputs = [ctx.file.src]
@@ -41,16 +42,18 @@ def _impl(ctx):
     requires_stamping = False
     for dep in ctx.attr.deps:
         valid_labels = _get_valid_labels(ctx, dep.label)
-        if ContentPublisherInfo in dep:
+        if FileUploaderInfo in dep:
             content_publishers += [dep]
+
             # TODO: make sure target is executable & fail early if it's not
-            info = dep[ContentPublisherInfo]
-            inputs += [info.published_location]
+            info = dep[FileUploaderInfo]
+            inputs += [info.url]
             args.add("--content_addressable_file", struct(
                 label = str(ctx.label),
                 valid_labels = valid_labels,
-                published_location_file = info.published_location,
+                url_file = info.url.short_path,
             ).to_json())
+
         # TODO: move this to "container_push wrapper"
         if PushInfo in dep:
             container_pushes += [dep]
@@ -80,7 +83,9 @@ def _impl(ctx):
         tools = ctx.attr._embedder.default_runfiles.files,
     )
     return [EmbeddedContentInfo(
-        content_publishers = depset(direct = content_publishers),
+        content_publishers = depset(
+            direct = content_publishers + content_publishers,
+        ),
     )]
 
 embedded_reference = rule(
@@ -99,12 +104,12 @@ embedded_reference = rule(
             doc = "Embeddable targets (eg container_push, content_addressable_file, etc).",
             providers = [
                 [PushInfo],
-                [ContentPublisherInfo],
+                [FileUploaderInfo],
             ],
             mandatory = True,
         ),
         "_embedder": attr.label(
-            default = "//experimental/cas/internal:embedder",
+            default = "//experimental/internal/embedding:embedder",
             cfg = "host",
             executable = True,
         ),

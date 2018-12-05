@@ -1,7 +1,7 @@
-load("//experimental:container.bzl", "container_push")
 load("//experimental:k8s.bzl", "terraform_k8s_manifest")
 load("//experimental:publishing.bzl", "embedded_reference", "file_upload")
 load("//terraform:def.bzl", "terraform_module")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 load("@io_bazel_rules_docker//python:image.bzl", "py_image")
 
 py_image(

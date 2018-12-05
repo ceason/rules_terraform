@@ -1,4 +1,4 @@
-load("//experimental/internal:providers.bzl", "ContentPublisherInfo")
+load("//experimental/internal:providers.bzl", "FileUploaderInfo")
 load("@bazel_tools//tools/build_defs/hash:hash.bzl", "sha256", hash_tools = "tools")
 load("//terraform/internal:launcher.bzl", "create_launcher")
 
@@ -42,8 +42,8 @@ def _impl(ctx):
             executable = ctx.outputs.executable,
             runfiles = runfiles,
         ),
-        ContentPublisherInfo(
-            published_location = ctx.outputs.out,
+        FileUploaderInfo(
+            url = ctx.outputs.out,
         ),
     ]
 
@@ -60,12 +60,12 @@ file_upload = rule(
             doc = "Prefix of URL where this file should be published (eg 's3://my-bucket-name/')",
         ),
         "_casfile_url": attr.label(
-            default = Label("//experimental/cas/internal:casfile_url"),
+            default = Label("//experimental/internal/embedding:casfile_url"),
             cfg = "host",
             executable = True,
         ),
         "_casfile_publisher": attr.label(
-            default = Label("//experimental/cas/internal:casfile_publisher"),
+            default = Label("//experimental/internal/embedding:casfile_publisher"),
             cfg = "host",
             executable = True,
         ),

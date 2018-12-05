@@ -13,7 +13,7 @@ def _terraform_k8s_manifest_impl(ctx):
     args.add("--output", out)
 
     ctx.actions.run(
-        inputs = ctx.attr.srcs,
+        inputs = ctx.files.srcs,
         outputs = [out],
         executable = ctx.executable._k8s_tool,
         arguments = [args],

@@ -3,20 +3,25 @@ load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformW
 _module_attrs = {
     "srcs": attr.label_list(
         allow_files = [".tf"],
+        default = [],
     ),
     "data": attr.label_list(
         allow_files = True,
+        default = [],
     ),
     "embed": attr.label_list(
         doc = "Merge the content of other <terraform_module>s (or other 'ModuleInfo' providing deps) into this one.",
         providers = [TerraformModuleInfo],
+        default = [],
     ),
     "deps": attr.label_list(
         providers = [TerraformModuleInfo],
+        default = [],
     ),
     "plugins": attr.label_list(
         doc = "Custom Terraform plugins that this module requires.",
         providers = [TerraformPluginInfo],
+        default = [],
     ),
     "modulepath": attr.string(),
 }
@@ -46,16 +51,43 @@ module_tool_attrs = {
 }
 
 def _collect_srcs(ctx):
-    fail("Unimplemented")
+    srcs = []
+    srcs += ctx.attr.srcs
+    for dep in ctx.attr.embed:
+        srcs += dep[TerraformModuleInfo].srcs
+    return srcs
 
 def _collect_data(ctx):
-    fail("Unimplemented")
+    file_map = {}
+    file_tars = []
+    for f in ctx.files.data:
+        label = f.owner or ctx.label
+        prefix = label.package + "/"
+        path = f.short_path[len(prefix):]
+        if path in file_map and f != file_map[path]:
+            fail("Conflicting files for path '%s' (%s, %s)" % (path, f, file_map[path]), attr = "data")
+        file_map[path] = f
+    for dep in ctx.embed.embed:
+        info = dep[TerraformModuleInfo]
+        for path, f in getattr(info, "file_map", {}).items():
+            if path in file_map and f != file_map[path]:
+                fail("Conflicting files for path '%s' (%s, %s)" % (path, f, file_map[path]), attr = "data")
+            file_map[path] = f
+        file_tars += getattr(info, "file_tars") or []
+    return file_map, depset(transitive = file_tars)
 
 def _collect_plugins(ctx):
-    fail("Unimplemented")
+    transitive = []
+    for dep in ctx.attr.embed:
+        transitive += dep[TerraformModuleInfo].plugins
+    return depset(direct = ctx.attr.plugins, transitive = transitive)
 
 def _collect_deps(ctx):
-    fail("Unimplemented")
+    transitive = []
+    transitive += ctx.attr.deps
+    for dep in ctx.attr.embed:
+        transitive += dep[TerraformModuleInfo].modules
+    return depset(direct = ctx.attr.modules, transitive = transitive)
 
 def _generate_docs(ctx, srcs, md_output = None, json_output = None):
     fail("Unimplemented")

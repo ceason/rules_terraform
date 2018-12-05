@@ -6,9 +6,9 @@ terraform_workspace(
         "k8s.tf",
         "test_ws.tf",
     ],
-    modules = {
-        "module": "//examples/src:hello-world_k8s",
-    },
+    deps = [
+        "//examples/src:hello-world_k8s",
+    ],
 )
 
 terraform_workspace(
@@ -17,9 +17,9 @@ terraform_workspace(
         "ecs.tf",
         "test_ws.tf",
     ],
-    modules = {
-        "module": "//examples/src:hello-world_ecs",
-    },
+    deps = [
+        "//examples/src:hello-world_ecs",
+    ],
 )
 
 sh_test(
