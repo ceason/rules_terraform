@@ -1,8 +1,8 @@
 docker image is
 - {{embedded_reference :push_image}}
-- {{embedded_reference //experimental/cas/examples:push_image}}
-- {{embedded_reference //experimental/cas/examples:push_image  }}
-- {{ embedded_reference //experimental/cas/examples:push_image  }}
+- {{embedded_reference //examples/src:push_py_image}}
+- {{embedded_reference //examples/src:push_py_image  }}
+- {{ embedded_reference //examples/src:push_py_image  }}
 
 published file is
 - {{embedded_reference :published_jar}}

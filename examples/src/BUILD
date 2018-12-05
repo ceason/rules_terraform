@@ -18,6 +18,7 @@ container_push(
     repository = "netchris/hello-world-server",
     stamp = True,
     tag = "dev",
+    visibility = ["//visibility:public"],
 )
 
 terraform_k8s_manifest(
