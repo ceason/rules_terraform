@@ -50,7 +50,7 @@ def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_deli
             info = dep[FileUploaderInfo]
             inputs += [info.url]
             args.add("--content_addressable_file", struct(
-                label = str(ctx.label),
+                label = str(dep.label),
                 valid_labels = valid_labels,
                 url_file = info.url.short_path,
             ).to_json())

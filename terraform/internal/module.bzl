@@ -138,7 +138,7 @@ def _resolve_srcs(
         if not getattr(info, "modulepath"):
             fail("Implementation error. %s's TerraformModuleInfo provider has no 'modulepath' field." % ctx.label, attr = "deps")
         args.add("--embedded_module", struct(
-            label = str(ctx.label),
+            label = str(m.label),
             modulepath = info.modulepath,
             valid_labels = get_valid_labels(ctx, m.label),
         ).to_json())
