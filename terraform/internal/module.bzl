@@ -100,7 +100,7 @@ def _collect_deps(ctx):
 
 def _generate_docs(ctx, srcs, md_output = None, json_output = None):
     files = ctx.actions.args()
-    files.add_all([f for f in srcs if f.extension == ".tf"])
+    files.add_all([f for f in srcs if f.extension == "tf"])
     ctx.actions.run_shell(
         inputs = srcs + [ctx.executable._terraform_docs],
         outputs = [md_output, json_output],
