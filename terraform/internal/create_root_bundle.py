@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(
     description='Description')
 
 parser.add_argument(
-    '--input_tar', action='append', default=[],
+    '--input_tar', action='append', default=[], nargs=2, metavar=('modulepath', 'tar'),
     help="Bundle of files to add to module")
 parser.add_argument(
     '--input_file', action='append', default=[], nargs=2, metavar=('tgt_path', 'input_file'),
@@ -32,9 +32,11 @@ def main(args):
         output.add(realpath(f), arcname=arcname)
 
     # iterate tars, iterate files & add them
-    for t in args.input_tar:
+    for modulepath, t in args.input_tar:
         with tarfile.open(t, "r") as tar:
             for tarinfo in tar.getmembers():
+                if modulepath:
+                    tarinfo.name = "modules/%s/%s" % (modulepath, tarinfo.name)
                 f = tar.extractfile(tarinfo)
                 output.addfile(tarinfo, f)
 

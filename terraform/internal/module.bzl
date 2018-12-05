@@ -159,7 +159,7 @@ def _create_root_bundle(ctx, output, root_resolved_srcs, module_info):
     args.add("--output", output)
 
     # get relevant data from the immediate module
-    args.add("--input_tar", root_resolved_srcs)
+    args.add_all("--input_tar", ["", root_resolved_srcs])
     inputs += [root_resolved_srcs]
     if module_info.file_map:
         for path, file in module_info.file_map.items():
@@ -173,13 +173,14 @@ def _create_root_bundle(ctx, output, root_resolved_srcs, module_info):
     if module_info.modules:
         for dep in module_info.modules.to_list():
             m = dep[TerraformModuleInfo]
-            args.add("--input_tar", m.resolved_srcs)
+            args.add_all("--input_tar", [m.modulepath, m.resolved_srcs])
             inputs += [m.resolved_srcs]
-            args.add_all("--input_tar", m.file_tars)
+            for f in m.file_tars.to_list():
+                args.add_all("--input_tar", [m.modulepath, f])
             transitive += [m.file_tars]
             if getattr(m, "file_map"):
                 for path, file in m.file_map.items():
-                    args.add_all("--input_file", [path, file])
+                    args.add_all("--input_file", ["modules/%s/%s" % (m.modulepath, path), file])
                     inputs += [file]
     ctx.actions.run(
         inputs = depset(direct = inputs, transitive = transitive),

@@ -106,7 +106,7 @@ def main(args):
             module_output.write(suffix)
 
         root_filename = file_basename
-        module_filename = "modules/%s/%s" % (args.modulepath, file_basename)
+        module_filename = file_basename
 
         root_output_value = root_output.getvalue()
         root_tarinfo = tarfile.TarInfo(root_filename)
