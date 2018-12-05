@@ -1,5 +1,5 @@
 docker image is
-- {{embedded_reference :push_image}}
+- {{embedded_reference @rules_terraform//examples/src:push_py_image}}
 - {{embedded_reference //examples/src:push_py_image}}
 - {{embedded_reference //examples/src:push_py_image  }}
 - {{ embedded_reference //examples/src:push_py_image  }}
