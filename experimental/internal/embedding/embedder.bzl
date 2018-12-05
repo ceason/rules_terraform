@@ -52,7 +52,7 @@ def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_deli
             args.add("--content_addressable_file", struct(
                 label = str(dep.label),
                 valid_labels = valid_labels,
-                url_file = info.url.short_path,
+                url_file = info.url.path,
             ).to_json())
 
         # TODO: move this to "container_push wrapper"
