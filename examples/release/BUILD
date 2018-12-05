@@ -1,8 +1,8 @@
-load("//experimental:publishing.bzl", "ghrelease", "ghrelease_assets", "ghrelease_test_suite")
+load("//experimental:publishing.bzl", "ghrelease_publisher", "ghrelease_assets", "ghrelease_test_suite")
 
 VERSION = "0.2"
 
-ghrelease(
+ghrelease_publisher(
     name = "release",
     args = ["--draft"],
     version = VERSION,

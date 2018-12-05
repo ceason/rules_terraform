@@ -90,7 +90,7 @@ def _impl(ctx):
         ),
     ]
 
-ghrelease = rule(
+ghrelease_publisher = rule(
     _impl,
     attrs = {
         "deps": attr.label_list(

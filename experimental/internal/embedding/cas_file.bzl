@@ -48,7 +48,7 @@ def _impl(ctx):
     ]
 
 #
-file_upload = rule(
+file_uploader = rule(
     _impl,
     attrs = hash_tools + {
         "src": attr.label(
