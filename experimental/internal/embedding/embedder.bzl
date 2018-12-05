@@ -1,7 +1,7 @@
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
 load("//experimental/internal:providers.bzl", "EmbeddedContentInfo", "FileUploaderInfo")
 
-def _get_valid_labels(ctx, embed_label):
+def get_valid_labels(ctx, embed_label):
     """
     Returns a list of valid replacement strings for this target; eg:
     - @rules_terraform//package:target  ..whenever target belongs to a named workspace (could be current workspace)
@@ -29,19 +29,20 @@ def _get_valid_labels(ctx, embed_label):
             valid += [":" + embed_label.name]
     return valid
 
-def _impl(ctx):
-    """
-    """
+def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_delimiter = ""):
     content_publishers = []
     container_pushes = []
+    inputs = []
 
     args = ctx.actions.args()
-    inputs = [ctx.file.src]
-    args.add("--template", ctx.file.src)
-    args.add("--output", ctx.outputs.out)
+    args.add("--output_delimiter", output_delimiter)
+    for f in srcs:
+        args.add("--input", f)
+        inputs += [f]
+    args.add("--output", output)
     requires_stamping = False
-    for dep in ctx.attr.deps:
-        valid_labels = _get_valid_labels(ctx, dep.label)
+    for dep in deps:
+        valid_labels = get_valid_labels(ctx, dep.label)
         if FileUploaderInfo in dep:
             content_publishers += [dep]
 
@@ -76,17 +77,28 @@ def _impl(ctx):
 
     ctx.actions.run(
         inputs = inputs,
-        outputs = [ctx.outputs.out],
+        outputs = [output],
         arguments = [args],
         mnemonic = "EmbedContentAddressableReferences",
         executable = ctx.executable._embedder,
         tools = ctx.attr._embedder.default_runfiles.files,
     )
-    return [EmbeddedContentInfo(
+    return EmbeddedContentInfo(
         content_publishers = depset(
             direct = content_publishers + content_publishers,
         ),
-    )]
+    )
+
+def _impl(ctx):
+    """
+    """
+    embedded_content_info = create_embedded_file(
+        ctx,
+        srcs = [ctx.file.src],
+        deps = ctx.attr.deps,
+        output = ctx.outputs.out,
+    )
+    return [embedded_content_info]
 
 embedded_reference = rule(
     _impl,

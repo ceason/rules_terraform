@@ -12,7 +12,6 @@ def _impl(ctx):
     """
     """
     files = []
-    transitive_runfiles = []
     transitive_assets = []
     transitive_docs = []
 
@@ -66,12 +65,10 @@ def _impl(ctx):
         runner = ctx.executable._assets_runner.short_path,
         config = config_file.short_path,
     ), is_executable = True)
-    transitive_runfiles.append(ctx.attr._assets_runner.data_runfiles)
-    transitive_runfiles.append(ctx.attr._assets_runner.default_runfiles)
 
-    runfiles = ctx.runfiles(files = files + assets, transitive_files = publisher_runfiles)
-    for rf in transitive_runfiles:
-        runfiles = runfiles.merge(rf)
+    runfiles = ctx.runfiles(files = files + assets)
+    runfiles = runfiles.merge(publisher_runfiles)
+    runfiles = runfiles.merge(ctx.attr._assets_runner.default_runfiles)
 
     return [
         DefaultInfo(

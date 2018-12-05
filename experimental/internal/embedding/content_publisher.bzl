@@ -3,7 +3,6 @@ load("//terraform/internal:launcher.bzl", "create_launcher", "runfiles_path")
 
 content_publisher_attrs = {}
 
-
 PublishableTargetsInfo = provider(
     fields = {
         "targets": "<Depset> of targets which return the 'EmbeddedContentInfo' provider.",
@@ -13,15 +12,14 @@ PublishableTargetsInfo = provider(
 def _content_publisher_aspect_impl(target, ctx):
     """
     """
-    targets = []
     transitive_targets = []
 
     if PublishableTargetsInfo in target:
         if target[PublishableTargetsInfo].targets != None:
-            transitive_targets.append(target[PublishableTargetsInfo].targets)
+            transitive_targets += [target[PublishableTargetsInfo].targets]
 
     if EmbeddedContentInfo in target:
-        targets.append(target)
+        transitive_targets += [target[EmbeddedContentInfo].content_publishers]
 
     # recursively(ish?) go over all 'dir(ctx.rule.attr)'
     # - check 'if PublishableTargetsInfo in' then targets.append()
@@ -48,8 +46,8 @@ def _content_publisher_aspect_impl(target, ctx):
                 if t[PublishableTargetsInfo].targets != None:
                     transitive_targets.append(t[PublishableTargetsInfo].targets)
 
-    if targets or transitive_targets:
-        publishable_targets = depset(direct = targets, transitive = transitive_targets)
+    if transitive_targets:
+        publishable_targets = depset(transitive = transitive_targets)
     else:
         publishable_targets = None
     return [PublishableTargetsInfo(targets = publishable_targets)]
@@ -65,37 +63,39 @@ def create_content_publisher(ctx, output, aspect_targets):
     Creates an executable file
     Returns runfiles necessary when running the content publisher
     """
-    files = []
-    runfiles = []
-
-    content_publishers = []
+    targets_to_run = []
 
     for t in aspect_targets:
         # TODO(ceason): identify file targets in a more robust way
         if PublishableTargetsInfo not in t and str(t).startswith("<input file"):
             continue
-        targets = t[PublishableTargetsInfo].targets
-        if targets != None:
-            for target in targets.to_list():
-                found_something = False
-                if EmbeddedContentInfo in target:
-                    info = target[EmbeddedContentInfo]
-                    content_publishers += [info.content_publishers]
-    # flatten list of depsets to list of content
-    content_publishers = depset(transitive = content_publishers).to_list()
+        if getattr(t[PublishableTargetsInfo], "targets"):
+            targets_to_run += t[PublishableTargetsInfo].targets
 
-    # add content publisher targets args+runfiles
-    for t in content_publishers:
+    # flatten list of depsets
+    targets_to_run = depset(transitive = targets_to_run).to_list()
+
+    # runner will iterate each of the publishable targets & run each one
+    runner = ctx.actions.declare_file(output.basename + "_runner.bash", sibling = output)
+    ctx.actions.write(runner, """#!/usr/bin/env bash
+                      set -euo pipefail
+                      for f in "$@"; do
+                        "$f"
+                      done
+                      """, is_executable = True)
+
+    # add each runnable target
+    args = [runner]
+    seen = {}
+    for t in targets_to_run:
+        if t not in seen:
+            seen[t] = True
+            args += [t.files_to_run.executable]
+    runfiles = ctx.runfiles(files = [output, runner] + args)
+    for t in targets_to_run:
         runfiles = runfiles.merge(t.default_runfiles)
-        files += [t.files_to_run.executable]
-        args += ["--content_publisher", t.files_to_run.executable]
-
     create_launcher(ctx, output, args)
-    files += [output]
-    runfiles = runfiles.merge(ctx.runfiles(files = files))
-
     return runfiles
-
 
 def _content_publisher_impl(ctx):
     """
