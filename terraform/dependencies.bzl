@@ -81,6 +81,7 @@ py_library(
     name = "py_botocore",
     srcs = glob([ "botocore/**/*.py" ]),
     imports = [ "botocore" ],
+    deps = [ "@py_dateutil", "@py_jmespath", "@py_s3transfer" ],
     visibility = [ "//visibility:public" ],
     data = glob([ "botocore/data/**" ]),
 )
@@ -99,6 +100,52 @@ py_library(
     deps = [ "@py_botocore" ],
     visibility = [ "//visibility:public" ],
     data = glob([ "boto3/data/**" ]),
+)
+""",
+    )
+    _maybe(
+        new_git_repository,
+        name = "py_dateutil",
+        remote = "https://github.com/dateutil/dateutil.git",
+        tag = "2.7.5",
+        build_file_content = """
+py_library(
+    name = "py_dateutil",
+    srcs = glob([ "dateutil/**/*.py" ]),
+    imports = [ "dateutil" ],
+    deps = [ ],
+    visibility = [ "//visibility:public" ],
+)
+""",
+    )
+    _maybe(
+        new_git_repository,
+        name = "py_s3transfer",
+        remote = "https://github.com/boto/s3transfer.git",
+        #tag = "0.1.13",
+        commit = "f506f396f054d35288bcf86d5289f8749a366ccd",
+        build_file_content = """
+py_library(
+    name = "py_s3transfer",
+    srcs = glob([ "s3transfer/**/*.py" ]),
+    imports = [ "s3transfer" ],
+    deps = [ ],
+    visibility = [ "//visibility:public" ],
+)
+""",
+    )
+    _maybe(
+        new_git_repository,
+        name = "py_jmespath",
+        remote = "https://github.com/jmespath/jmespath.git",
+        tag = "0.9.3",
+        build_file_content = """
+py_library(
+    name = "py_jmespath",
+    srcs = glob([ "jmespath/**/*.py" ]),
+    imports = [ "jmespath" ],
+    deps = [ ],
+    visibility = [ "//visibility:public" ],
 )
 """,
     )

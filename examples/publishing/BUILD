@@ -1,22 +1,6 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 load("@io_bazel_rules_docker//python:image.bzl", python_base_image = "DEFAULT_BASE")
-load("//experimental:publishing.bzl", "file_uploader", "embedded_reference")
-#
-#py_image(
-#    name = "py_image",
-#    srcs = ["server.py"],
-#    main = "server.py",
-#)
-
-container_push(
-    name = "push_image",
-    format = "Docker",
-    image = python_base_image,
-    registry = "index.docker.io",
-    repository = "netchris/py-base-image",
-    stamp = True,
-    tag = "dev",
-)
+load("//experimental:publishing.bzl", "embedded_reference", "file_uploader")
 
 java_binary(
     name = "HelloWorld",
@@ -36,6 +20,6 @@ embedded_reference(
     out = "outfile.txt",
     deps = [
         ":published_jar",
-        ":push_image",
+        "//examples/src:push_py_image",
     ],
 )
