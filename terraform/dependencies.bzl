@@ -107,6 +107,12 @@ def terraform_repositories():
     )
     _maybe(
         _pip_package,
+        name = "py_certifi",
+        sha256 = "47f9c83ef4c0c621eaef743f133f09fa8a74a9b75f037e8624f83bd1b6626cb7",
+        urls = ["https://files.pythonhosted.org/packages/55/54/3ce77783acba5979ce16674fc98b1920d00b01d337cfaaf5db22543505ed/certifi-2018.11.29.tar.gz"],
+    )
+    _maybe(
+        _pip_package,
         name = "py_boto3",
         urls = ["https://files.pythonhosted.org/packages/fe/ea/3f0dedaf1b733908a171c2aa24d322ad18c1aee171afff88a7b9e843d845/boto3-1.9.60.tar.gz"],
         sha256 = "6e9f48f3cd16f4b4e1e2d9c49c0644568294f67cda1a93f84315526cbd7e70ae",
@@ -122,6 +128,7 @@ def terraform_repositories():
             "@py_jmespath",
             "@py_s3transfer",
             "@py_urllib3",
+            "@py_certifi",
         ],
     )
     _maybe(
