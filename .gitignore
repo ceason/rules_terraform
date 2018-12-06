@@ -2,4 +2,4 @@
 /.ijwb/
 .rules_terraform/
 /.bazelrc-local
-/.envrc
+.envrc
