@@ -1,4 +1,4 @@
-load("//terraform:providers.bzl", "ModuleInfo", "PluginInfo", "WorkspaceInfo", "tf_workspace_files_prefix")
+load(":providers.bzl", "TerraformModuleInfo", "TerraformPluginInfo", "TerraformWorkspaceInfo", "tf_workspace_files_prefix")
 load("//terraform/internal:launcher.bzl", "create_launcher", "runfiles_path")
 
 def create_terraform_renderer(ctx, output, module_info):
@@ -13,7 +13,7 @@ def create_terraform_renderer(ctx, output, module_info):
     transitive_runfiles.append(ctx.attr._render_tf.default_runfiles.files)
 
     for p in module_info.plugins.to_list():
-        plugin = p[PluginInfo]
+        plugin = p[TerraformPluginInfo]
         for filename, file in plugin.files.items():
             args.extend(["--plugin_file", filename, file])
             runfiles.append(file)

@@ -30,12 +30,16 @@ parser.add_argument(
     help='File from which to read stamp replacements')
 
 parser.add_argument(
-    '--template', action='store', required=True,
-    help='The template file to resolve.')
+    '--input', action='append', required=True,
+    help='The template files to resolve.')
 
 parser.add_argument(
     '--output', action='store', required=True,
     help='Output file.')
+
+parser.add_argument(
+    '--output_delimiter', action='store', default="",
+    help='Output delimiter.')
 
 
 def embed(args):
@@ -86,33 +90,33 @@ def embed(args):
     # make sure..
     # - all references have exactly one embeddable
     # - all embeddables have at least one reference
-
-    with open(args.template, "r") as f:
-        parts = EmbeddedLabelRgx.split(f.read())
-    if len(parts) < 2:
-        raise ValueError("Could not find any embedded references within the template file.")
-    output_content = io.BytesIO()
-    is_label = False
-    for s in parts:
-        if is_label:
+    with open(args.output, "w") as output:
+        for idx, input_file in enumerate(args.input):
+            with open(input_file, "r") as f:
+                parts = EmbeddedLabelRgx.split(f.read())
+            output_content = io.BytesIO()
             is_label = False
-            if s != "":
-                label = s.strip()
-                replacement = embeds.get(label)
-                if not replacement:
-                    raise ValueError("No matching label found for '%s' referenced in template file. "
-                                     "Are you sure it's listed in deps?" % label)
-                unseen_replacements.discard(replacement)
-                output_content.write(replacement)
-        else:
-            is_label = True
-            output_content.write(s)
+            for s in parts:
+                if is_label:
+                    is_label = False
+                    if s != "":
+                        label = s.strip()
+                        replacement = embeds.get(label)
+                        if not replacement:
+                            raise ValueError("No matching label found for '%s'. "
+                                             "Are you sure it's listed as a dependency?" % label)
+                        unseen_replacements.discard(replacement)
+                        output_content.write(replacement)
+                else:
+                    is_label = True
+                    output_content.write(s)
+            if idx > 0 and args.output_delimiter:
+                output.write(args.output_delimiter)
+            output.write(output_content.getvalue())
     if unseen_replacements:
         raise ValueError(
             "Unreferenced dependencies. Either reference them in the template, "
-            "or remove them from deps (%s)" % unseen_replacements)
-    with open(args.output, "w") as f:
-        f.write(output_content.getvalue())
+            "or don't list them as dependencies. (%s)" % unseen_replacements)
 
 
 def main():

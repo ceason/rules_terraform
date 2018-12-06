@@ -29,7 +29,7 @@ if [ -z "${PYTHON_RUNFILES-""}" ]; then
   export PYTHON_RUNFILES="$RUNFILES"
 fi
 tf_workspace_dir="%{tf_workspace_dir}"
-terraform=$("%{render_workspace}" --symlink_plugins "$tf_workspace_dir")
+terraform=$("%{render_workspace}" "$tf_workspace_dir")
 
 _terraform_quiet(){
 	local output=$(mktemp)

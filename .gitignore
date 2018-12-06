@@ -1,4 +1,5 @@
-bazel-*
-.ijwb/
+/bazel-*
+/.ijwb/
 .rules_terraform/
-.bazelrc-local
+/.bazelrc-local
+.envrc

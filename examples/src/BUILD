@@ -1,8 +1,8 @@
+load("//experimental:k8s.bzl", "terraform_k8s_manifest")
+load("//experimental:publishing.bzl", "embedded_reference", "file_uploader")
 load("//terraform:def.bzl", "terraform_module")
-load("//terraform:container.bzl", "image_embedder", "terraform_k8s_manifest")
-load("@io_bazel_rules_docker//python:image.bzl", "py_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
-load("//experimental/cas:def.bzl", "content_addressable_file", "embedded_reference")
+load("@io_bazel_rules_docker//python:image.bzl", "py_image")
 
 py_image(
     name = "py_image",
@@ -24,15 +24,14 @@ container_push(
 terraform_k8s_manifest(
     name = "k8s-deployment",
     srcs = ["server.yaml"],
-    image_chroot = "$(IMAGE_CHROOT)",
-    images = {
-        "hello-world-server:dev": ":py_image",
-    },
+    deps = [
+        ":push_py_image",
+    ],
 )
 
 embedded_reference(
     name = "ecs-task-containers",
-    src = "ecs-task-containers.tpl.json",
+    src = "ecs-task-containers.json.tpl",
     out = "ecs-task-containers.json",
     deps = [
         ":push_py_image",
@@ -55,8 +54,9 @@ terraform_module(
         "ecs.tf",
         "ecs-plumbing.tf",
         "main.tf",
+    ],
+    data = [
         ":ecs-task-containers",
     ],
-    #embed = [":ecs-task-containers"],
     visibility = ["//visibility:public"],
 )

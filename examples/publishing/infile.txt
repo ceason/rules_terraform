@@ -6,5 +6,5 @@ docker image is
 
 published file is
 - {{embedded_reference :published_jar}}
-- {{embedded_reference //experimental/cas/examples:published_jar}}
-- {{  embedded_reference @rules_terraform//experimental/cas/examples:published_jar  }}
+- {{embedded_reference //examples/publishing:published_jar}}
+- {{  embedded_reference @rules_terraform//examples/publishing:published_jar  }}

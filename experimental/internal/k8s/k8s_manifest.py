@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(
                 "& splits k8s yaml to individual files")
 
 parser.add_argument(
-    '--file', action='append', required=True,
+    '--input', action='append', required=True,
     help='File containing one or more k8s objects.')
 parser.add_argument(
     '--tf_filename', action='store', required=True,
@@ -63,7 +63,7 @@ def main():
     output = tarfile.open(args.output, "w")
 
     k8s_objects = []
-    for path in args.file:
+    for path in args.input:
         with open(path, 'r') as f:
             for item in yaml.load_all(f.read()):
                 obj = KubectlGenericObject(item)

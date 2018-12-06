@@ -14,12 +14,14 @@ Providers:
   - srcs: List<File> of sources
     - ^ error when file.basename conflicts
   - resolved_srcs: tar bundle of this module's srcs, resolved as if we're in the non-root module
-  - data: dict of "path => <File>"
+  - files: dict of "path => <File>"
     - ^ error when files are in 'modules/' subdir
     - ^ error when embedding conflicting files
+  - files_tar: depset of .tar files to be unpacked into the module
+    - ^ same constraints as 'files' apply
   - plugins: depset of "<Target(PluginInfo)>" of plugins required by this module
     - ^ workspace rule will warn when there are duplicate versions of same plugin
-  - deps: "Depset<Target(ModuleInfo)>" of other modules required by this module
+  - modules: 'Depset<Target(ModuleInfo)>' of other modules required by this module
     - ^ compiler gives error when different modules have same modulepath
     - ^ compiler gives error when modulepath is a subdirectory within another module's modulepath
 

@@ -1,0 +1,1 @@
+load("//experimental/internal/k8s:k8s_manifest.bzl", "terraform_k8s_manifest")

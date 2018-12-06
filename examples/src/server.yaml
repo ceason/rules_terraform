@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: hello-world-server:dev
+        image: {{embedded_reference :push_py_image}}
         terminationMessagePolicy: FallbackToLogsOnError
         envFrom:
         - configMapRef: {name: hello-world-server, optional: false}

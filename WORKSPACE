@@ -1,5 +1,12 @@
 workspace(name = "rules_terraform")
+
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
+
+#git_repository(
+#    name = "io_bazel_rules_docker",
+#    commit = "ff03d2b2800641bdd407bc89823c84b96aa0b15a",
+#    remote = "https://github.com/ceason/rules_docker.git",
+#)
 
 load("//terraform:dependencies.bzl", "terraform_repositories")
 

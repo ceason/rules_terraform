@@ -152,8 +152,8 @@ py_library(
     _maybe(
         git_repository,
         name = "io_bazel_rules_docker",
-        commit = "ff03d2b2800641bdd407bc89823c84b96aa0b15a",
-        remote = "https://github.com/ceason/rules_docker.git",
+        commit = "5eb0728594013d746959c4bd21aa4b0c3e3848d8",
+        remote = "https://github.com/bazelbuild/rules_docker.git",
     )
 
 def _maybe(rule, **kwargs):

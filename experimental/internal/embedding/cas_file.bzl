@@ -1,4 +1,4 @@
-load(":providers.bzl", "ContentAddressableFileInfo")
+load("//experimental/internal:providers.bzl", "FileUploaderInfo")
 load("@bazel_tools//tools/build_defs/hash:hash.bzl", "sha256", hash_tools = "tools")
 load("//terraform/internal:launcher.bzl", "create_launcher")
 
@@ -42,14 +42,13 @@ def _impl(ctx):
             executable = ctx.outputs.executable,
             runfiles = runfiles,
         ),
-        ContentAddressableFileInfo(
-            file = ctx.file.src,
+        FileUploaderInfo(
             url = ctx.outputs.out,
         ),
     ]
 
 #
-content_addressable_file = rule(
+file_uploader = rule(
     _impl,
     attrs = hash_tools + {
         "src": attr.label(
@@ -61,12 +60,12 @@ content_addressable_file = rule(
             doc = "Prefix of URL where this file should be published (eg 's3://my-bucket-name/')",
         ),
         "_casfile_url": attr.label(
-            default = Label("//experimental/cas/internal:casfile_url"),
+            default = Label("//experimental/internal/embedding:casfile_url"),
             cfg = "host",
             executable = True,
         ),
         "_casfile_publisher": attr.label(
-            default = Label("//experimental/cas/internal:casfile_publisher"),
+            default = Label("//experimental/internal/embedding:casfile_publisher"),
             cfg = "host",
             executable = True,
         ),
