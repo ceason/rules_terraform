@@ -1,12 +1,5 @@
-b
-
-def terraform_module(name, modules = {}, **kwargs):
-    _terraform_module(
-        name = name,
-        modules = flip_modules_attr(modules),
-        **kwargs
-    )
-azel-*
-.ijwb/
+/bazel-*
+/.ijwb/
 .rules_terraform/
-.bazelrc-local
+/.bazelrc-local
+/.envrc
