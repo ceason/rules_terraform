@@ -85,7 +85,7 @@ def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_deli
     )
     return EmbeddedContentInfo(
         content_publishers = depset(
-            direct = content_publishers + content_publishers,
+            direct = content_publishers + container_pushes,
         ),
     )
 

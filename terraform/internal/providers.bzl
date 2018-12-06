@@ -1,7 +1,6 @@
 TerraformPluginInfo = provider(
     fields = {
         "files": "Map of 'filesRelativeToPluginDir' => 'File'",
-        "platform_executables": "Map of 'os_arch (eg linux_amd64)' => 'File'",
     },
 )
 
