@@ -32,6 +32,58 @@ _EXTERNAL_BINARIES = {
     ),
 }
 
+def _pip_package(
+        name,
+        package_name = None,
+        urls = None,
+        sha256 = None,
+        strip_prefix = None,
+        deps = [],
+        imports = [],
+        srcs = """glob(["**/*.py", "*.py"])""",
+        data = """glob(["**"], exclude=["**/*.py"])"""):
+    """
+    """
+    if not package_name:
+        package_name = name
+    if strip_prefix == None:
+        basename = urls[0].split("/")[-1]
+        if basename.endswith(".tar.gz"):
+            strip_prefix = basename[:-len(".tar.gz")]
+            if not name.startswith("py_"):
+                strip_prefix += "/%s" % package_name
+        else:
+            fail("Expected URL ending in '.tar.gz'", attr = "urls")
+    build_file_content = """
+py_library(
+    name = "{package_name}",
+    srcs = {srcs},
+    data = {data},
+    imports = {imports},
+    visibility = [ "//visibility:public" ],
+    deps = {deps},
+)
+""".format(
+        package_name = package_name,
+        srcs = srcs,
+        data = data,
+        deps = "[%s]" % ", ".join([
+            '"%s"' % dep
+            for dep in sorted(deps)
+        ]),
+        imports = "None" if not imports else "[%s]" % ", ".join([
+            '"%s"' % s
+            for s in imports
+        ]),
+    )
+    http_archive(
+        name = name,
+        urls = urls,
+        sha256 = sha256,
+        strip_prefix = strip_prefix,
+        build_file_content = build_file_content,
+    )
+
 def _repository_name(s):
     prefix = "tool_"
     return prefix + s.replace("-", "_")
@@ -44,110 +96,78 @@ def terraform_repositories():
             rule_fn(name = name, **rule_args)
 
     _maybe(
-        http_archive,
+        _pip_package,
         name = "yaml",
-        build_file_content = """
-py_library(
-    name = "yaml",
-    srcs = glob(["*.py"]),
-    visibility = ["//visibility:public"],
-)""",
         sha256 = "592766c6303207a20efc445587778322d7f73b161bd994f227adaa341ba212ab",
-        url = ("https://pypi.python.org/packages/4a/85/db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a/PyYAML-3.12.tar.gz"),
+        urls = ["https://pypi.python.org/packages/4a/85/db5a2df477072b2902b0eb892feb37d88ac635d36245a72a6a69b23b383a/PyYAML-3.12.tar.gz"],
         strip_prefix = "PyYAML-3.12/lib/yaml",
     )
     _maybe(
-        http_archive,
+        _pip_package,
         name = "py_semver",
-        build_file_content = """
-py_library(
-    name = "py_semver",
-    srcs = glob(["*.py"]),
-    visibility = ["//visibility:public"],
-    imports = ["semver"],
-)
-""",
         sha256 = "5b09010a66d9a3837211bb7ae5a20d10ba88f8cb49e92cb139a69ef90d5060d8",
-        url = "https://files.pythonhosted.org/packages/47/13/8ae74584d6dd33a1d640ea27cd656a9f718132e75d759c09377d10d64595/semver-2.8.1.tar.gz",
-        strip_prefix = "semver-2.8.1",
+        urls = ["https://files.pythonhosted.org/packages/47/13/8ae74584d6dd33a1d640ea27cd656a9f718132e75d759c09377d10d64595/semver-2.8.1.tar.gz"],
     )
     _maybe(
-        new_git_repository,
-        name = "py_botocore",
-        remote = "https://github.com/boto/botocore.git",
-        tag = "1.12.57",
-        build_file_content = """
-py_library(
-    name = "py_botocore",
-    srcs = glob([ "botocore/**/*.py" ]),
-    imports = [ "botocore" ],
-    deps = [ "@py_dateutil", "@py_jmespath", "@py_s3transfer" ],
-    visibility = [ "//visibility:public" ],
-    data = glob([ "botocore/data/**" ]),
-)
-""",
+        _pip_package,
+        name = "boto3",
+        urls = ["https://files.pythonhosted.org/packages/fe/ea/3f0dedaf1b733908a171c2aa24d322ad18c1aee171afff88a7b9e843d845/boto3-1.9.60.tar.gz"],
+        sha256 = "6e9f48f3cd16f4b4e1e2d9c49c0644568294f67cda1a93f84315526cbd7e70ae",
+        deps = ["@botocore"],
     )
     _maybe(
-        new_git_repository,
-        name = "py_boto3",
-        remote = "https://github.com/boto/boto3.git",
-        tag = "1.9.57",
-        build_file_content = """
-py_library(
-    name = "py_boto3",
-    srcs = glob([ "boto3/**/*.py" ]),
-    imports = [ "boto3" ],
-    deps = [ "@py_botocore" ],
-    visibility = [ "//visibility:public" ],
-    data = glob([ "boto3/data/**" ]),
-)
-""",
+        _pip_package,
+        name = "botocore",
+        sha256 = "e298eaa3883d5aa62a21e84b68a3b4d47b582fffdb93efefe53144d2ed9a824c",
+        urls = ["https://files.pythonhosted.org/packages/ec/52/992d721d2dab6e0b6ce1a92b892ca75d48e4200de7adc7af0eb65a3141ae/botocore-1.12.60.tar.gz"],
+        deps = [
+            "@dateutil",
+            "@jmespath",
+            "@s3transfer",
+            "@urllib3",
+        ],
     )
     _maybe(
-        new_git_repository,
-        name = "py_dateutil",
-        remote = "https://github.com/dateutil/dateutil.git",
-        tag = "2.7.5",
-        build_file_content = """
-py_library(
-    name = "py_dateutil",
-    srcs = glob([ "dateutil/**/*.py" ]),
-    imports = [ "dateutil" ],
-    deps = [ ],
-    visibility = [ "//visibility:public" ],
-)
-""",
+        _pip_package,
+        name = "dateutil",
+        sha256 = "88f9287c0174266bb0d8cedd395cfba9c58e87e5ad86b2ce58859bc11be3cf02",
+        urls = ["https://files.pythonhosted.org/packages/0e/01/68747933e8d12263d41ce08119620d9a7e5eb72c876a3442257f74490da0/python-dateutil-2.7.5.tar.gz"],
+        deps = ["@py_six"],
     )
     _maybe(
-        new_git_repository,
-        name = "py_s3transfer",
-        remote = "https://github.com/boto/s3transfer.git",
-        #tag = "0.1.13",
-        commit = "f506f396f054d35288bcf86d5289f8749a366ccd",
-        build_file_content = """
-py_library(
-    name = "py_s3transfer",
-    srcs = glob([ "s3transfer/**/*.py" ]),
-    imports = [ "s3transfer" ],
-    deps = [ ],
-    visibility = [ "//visibility:public" ],
-)
-""",
+        _pip_package,
+        name = "jmespath",
+        sha256 = "6a81d4c9aa62caf061cb517b4d9ad1dd300374cd4706997aff9cd6aedd61fc64",
+        urls = ["https://files.pythonhosted.org/packages/e5/21/795b7549397735e911b032f255cff5fb0de58f96da794274660bca4f58ef/jmespath-0.9.3.tar.gz"],
     )
     _maybe(
-        new_git_repository,
-        name = "py_jmespath",
-        remote = "https://github.com/jmespath/jmespath.git",
-        tag = "0.9.3",
-        build_file_content = """
-py_library(
-    name = "py_jmespath",
-    srcs = glob([ "jmespath/**/*.py" ]),
-    imports = [ "jmespath" ],
-    deps = [ ],
-    visibility = [ "//visibility:public" ],
-)
-""",
+        _pip_package,
+        name = "s3transfer",
+        sha256 = "90dc18e028989c609146e241ea153250be451e05ecc0c2832565231dacdf59c1",
+        urls = ["https://files.pythonhosted.org/packages/9a/66/c6a5ae4dbbaf253bd662921b805e4972451a6d214d0dc9fb3300cb642320/s3transfer-0.1.13.tar.gz"],
+        deps = [
+            "@concurrent"
+        ]
+    )
+    _maybe(
+        _pip_package,
+        name = "urllib3",
+        sha256 = "de9529817c93f27c8ccbfead6985011db27bd0ddfcdb2d86f3f663385c6a9c22",
+        urls = ["https://files.pythonhosted.org/packages/b1/53/37d82ab391393565f2f831b8eedbffd57db5a718216f82f1a8b4d381a1c1/urllib3-1.24.1.tar.gz"],
+        strip_prefix = "urllib3-1.24.1/src/urllib3",
+    )
+    _maybe(
+        _pip_package,
+        name = "py_six",
+        sha256 = "70e8a77beed4562e7f14fe23a786b54f6296e34344c23bc42f07b15018ff98e9",
+        urls = ["https://files.pythonhosted.org/packages/16/d8/bc6316cf98419719bd59c91742194c111b6f2e85abac88e496adefaf7afe/six-1.11.0.tar.gz"],
+    )
+    _maybe(
+        _pip_package,
+        name = "concurrent",
+        sha256 = "9ec02aa7d674acb8618afb127e27fde7fc68994c0437ad759fa094a574adb265",
+        urls = ["https://files.pythonhosted.org/packages/1f/9e/7b2ff7e965fc654592269f2906ade1c7d705f1bf25b7d469fa153f7d19eb/futures-3.2.0.tar.gz"],
+        strip_prefix = "futures-3.2.0/concurrent"
     )
     _maybe(
         git_repository,
