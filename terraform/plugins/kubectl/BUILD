@@ -1,9 +1,9 @@
-load("//terraform:def.bzl", "terraform_plugin")
+load("//terraform:def.bzl", "terraform_provider")
 
-terraform_plugin(
+terraform_provider(
     name = "kubectl",
-    darwin_amd64 = "terraform-provider-kubectl.tpl.sh",
-    linux_amd64 = "terraform-provider-kubectl.tpl.sh",
-    version = "v0.2.3",
+    file = "terraform-provider-kubectl.tpl.sh",
+    provider_name = "kubectl",
+    version = "v0.3.1",
     visibility = ["//visibility:public"],
 )

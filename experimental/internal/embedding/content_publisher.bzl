@@ -66,13 +66,9 @@ def create_content_publisher(ctx, output, aspect_targets):
     targets_to_run = []
 
     for t in aspect_targets:
-        # TODO(ceason): identify file targets in a more robust way
-        if PublishableTargetsInfo not in t and str(t).startswith("<input file"):
-            continue
-        elif getattr(t[PublishableTargetsInfo], "targets"):
+        # TODO(ceason): identify candidate targets in most robust way (is this it??)
+        if PublishableTargetsInfo in t and getattr(t[PublishableTargetsInfo], "targets"):
             targets_to_run += [t[PublishableTargetsInfo].targets]
-        else:
-            fail("Something went wrong.")
 
     # flatten list of depsets
     targets_to_run = depset(transitive = targets_to_run).to_list()

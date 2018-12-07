@@ -288,6 +288,21 @@ class GhHelper:
             repo_url=self._repo_url,
         ) for l in links]
 
+    def get_previous_release(self):
+        # find latest release (for our MAJOR.MINOR version)
+        # - get all releases, latest to earliest
+        # - return first release that has <= MAJOR and <= MINOR versions
+        is_le_major = False
+        is_le_minor = False
+        for r in sorted(self._releases, reverse=True):
+            if r.prerelease:
+                continue  # skip prerelease versions
+            if r.major == self._version_major and r.minor == self._version_minor:
+                return r
+            if r.major < self._version_major:
+                return r
+        return None
+
     def generate_releasenotes(self, docs_links=None, asset_srcs=None):
         # type: (list, set) -> str
         """
@@ -300,15 +315,7 @@ class GhHelper:
         docs_tpl = """### Docs
 {links}"""
 
-        from_tag = None
-        from_commit = None
-        # find latest release (for our MAJOR.MINOR version)
-        # - get all releases, latest to earliest
-        # - return first release that has <= MAJOR and <= MINOR versions
-        for r in sorted(self._releases, reverse=True):
-            if r.major <= self._version_major and r.minor <= self._version_minor:
-                from_tag = r.tag
-                from_commit = r.commit
+        previous = self.get_previous_release()
 
         output_parts = []
         if docs_links:
@@ -321,12 +328,12 @@ class GhHelper:
             output_parts.append(docs_tpl.format(
                 links="\n".join(docs_links_md)))
 
-        if from_commit:
-            changelog = "### Changes Since `%s`:\n" % from_tag
+        if previous:
+            changelog = "### Changes Since `%s`:\n" % previous.tag
             changelog += self._git([
                 "log",
                 "--format=%s" % changelog_tpl.format(repo_url=self._repo_url),
-                "%s..%s" % (from_commit, self._commit)
+                "%s..%s" % (previous.commit, self._commit)
             ])
             output_parts.append(changelog)
 

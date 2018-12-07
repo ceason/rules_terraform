@@ -25,7 +25,8 @@ def _impl(ctx):
     for dep in ctx.attr.deps:
         if GhReleaseAssetsInfo in dep:
             nfo = dep[GhReleaseAssetsInfo]
-            transitive_docs.append(nfo.docs)
+            if nfo.docs:
+                transitive_docs += [nfo.docs]
             asset_configs.append(struct(
                 label = str(dep.label),
                 env = nfo.env,
