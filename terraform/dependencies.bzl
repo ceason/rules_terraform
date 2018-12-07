@@ -3,6 +3,10 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_r
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 _EXTERNAL_BINARIES = {
+    "terraform-provider-kubectl": dict(
+        url = "https://github.com/ceason/terraform-provider-kubectl/releases/download/v{version}/terraform-provider-kubectl-{platform}-amd64",
+        version = "0.3.1",
+    ),
     "kubectl": dict(
         path = "kubernetes/client/bin/kubectl",
         url = "https://dl.k8s.io/v{version}/kubernetes-client-{platform}-amd64.tar.gz",
@@ -32,19 +36,13 @@ _EXTERNAL_BINARIES = {
     ),
 }
 
-def _pip_package(
-        name,
-        urls = None,
-        sha256 = None,
-        path = None,
-        deps = [],
-        imports = [],
-        srcs = """glob(["**/*.py", "*.py"])""",
-        data = """glob(["**"], exclude=["**/*.py"])"""):
+def _pip_package(name, urls = None, sha256 = None, path = None, deps = []):
     """
     """
+    srcs = """glob(["**/*.py", "*.py"])"""
+    data = """glob(["**"], exclude=["**/*.py"])"""
     if not name.startswith("py_"):
-        fail("'pip_package' must start with 'py_' (got '%s')" % name, attr="name")
+        fail("'pip_package' must start with 'py_' (got '%s')" % name, attr = "name")
     if not urls[0].endswith(".tar.gz"):
         fail("Expected URL ending in '.tar.gz'", attr = "urls")
     basename = urls[0].split("/")[-1]
@@ -56,7 +54,6 @@ py_library(
     name = "{name}",
     srcs = {srcs},
     data = {data},
-    imports = {imports},
     visibility = [ "//visibility:public" ],
     deps = {deps},
 )
@@ -67,10 +64,6 @@ py_library(
         deps = "[%s]" % ", ".join([
             '"%s"' % dep
             for dep in sorted(deps)
-        ]),
-        imports = "None" if not imports else "[%s]" % ", ".join([
-            '"%s"' % s
-            for s in imports
         ]),
     )
     http_archive(
@@ -149,7 +142,7 @@ def terraform_repositories():
         name = "py_s3transfer",
         sha256 = "90dc18e028989c609146e241ea153250be451e05ecc0c2832565231dacdf59c1",
         urls = ["https://files.pythonhosted.org/packages/9a/66/c6a5ae4dbbaf253bd662921b805e4972451a6d214d0dc9fb3300cb642320/s3transfer-0.1.13.tar.gz"],
-        deps = ["@py_futures"]
+        deps = ["@py_futures"],
     )
     _maybe(
         _pip_package,

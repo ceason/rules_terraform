@@ -92,25 +92,24 @@ def _http_file_binary_impl(ctx):
 
     # expand template for attributes
     url = _expand_template(ctx.attr.url, ctx, info)
-    filename = "file.exe" if info.platform_name == "windows" else "file"
+    filename = ctx.attr.url.split("/")[-1]
 
     # create a launcher
     ctx.file("WORKSPACE", content = """workspace(name = "%s")""" % ctx.attr.name)
     ctx.file("BUILD.bazel", content = """
+package(default_visibility = ["//visibility:public"])
 sh_binary(
-    name = "binary",
-    srcs = ["{filename}"],
-    visibility = ["//visibility:public"],
-)
-alias(
     name = "{repository_name}",
-    actual = ":binary",
-    visibility = ["//visibility:public"],
+    srcs = [":file"],
+)
+filegroup(
+    name = "file",
+    srcs = ["{filename}"],
 )
     """.format(filename = filename, repository_name = ctx.attr.name))
 
     # download file to the appropriate location
-    ctx.download(url, output = "file", executable = True)
+    ctx.download(url, output = filename, executable = True)
 
 http_file_binary = repository_rule(
     implementation = _http_file_binary_impl,
