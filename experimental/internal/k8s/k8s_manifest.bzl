@@ -46,7 +46,7 @@ def _terraform_k8s_manifest_impl(ctx):
     ]
 
 terraform_k8s_manifest = rule(
-    implementation = _terraform_k8s_manifest_impl,
+    _terraform_k8s_manifest_impl,
     attrs = {
         "srcs": attr.label_list(allow_files = [".yaml", ".json", ".yml"]),
         "deps": attr.label_list(

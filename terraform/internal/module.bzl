@@ -168,7 +168,7 @@ def _create_root_bundle(ctx, output, root_resolved_srcs, module_info):
     if module_info.file_tars:
         transitive += [module_info.file_tars]
         for f in module_info.file_tars.to_list():
-            args.add_all("--input_tar", [module_info.modulepath, f])
+            args.add_all("--input_tar", ["", f])
 
     # get relevant data from dependant modules
     if module_info.modules:

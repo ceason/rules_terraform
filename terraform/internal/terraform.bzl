@@ -28,7 +28,7 @@ terraform_provider = rule(
     _impl,
     attrs = {
         # todo: maybe make version stampable?
-        "version": attr.string(default = "v0.0.1"),
+        "version": attr.string(default = "v999.9.9"),
         "provider_name": attr.string(default = "", doc = "Name of terraform provider."),
         "file": attr.label(allow_single_file = True),
     },
