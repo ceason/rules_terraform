@@ -13,6 +13,7 @@ TerraformModuleInfo = provider(
         "file_tars":"depset of .tar files to be unpacked into the module",
         "plugins":"depset <Target(PluginInfo)> of plugins required by this module",
         "modules":"depset <Target(ModuleInfo)> of other modules required by this module",
+        "direct_modules": "Like 'modules' attr, but just for direct dependencies (used primarily for embedding)",
     },
 )
 

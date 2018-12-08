@@ -92,15 +92,36 @@ def _collect_plugins(ctx):
     return depset(direct = ctx.attr.plugins, transitive = transitive)
 
 def _collect_deps(ctx):
-    transitive = []
-    for dep in ctx.attr.embed:
-        if getattr(dep[TerraformModuleInfo], "modules"):
-            transitive += dep[TerraformModuleInfo].modules
-    return depset(direct = ctx.attr.deps, transitive = transitive)
+    """
+    Return (direct_modules, modules)
+    """
+    # "direct" will be..
+    # - ctx.attr.deps
+    # - also, for each ctx.attr.embed, TerraformModuleInfo.direct_modules
+
+    # "all" is
+    # - ctx.attr.deps, ctx.attr.embed
+    # - TerraformModuleInfo.modules for both deps & embeds
+    transitive = []  # used to create "modules" (ie all)
+    embedded = []  # used to create "direct_modules"
+    for embed in ctx.attr.embed:
+        if hasattr(embed[TerraformModuleInfo], "modules"):
+            transitive += [embed[TerraformModuleInfo].modules]
+        if hasattr(embed[TerraformModuleInfo], "direct_modules"):
+            embedded += [embed[TerraformModuleInfo].direct_modules]
+    for dep in ctx.attr.deps:
+        if hasattr(dep[TerraformModuleInfo], "modules"):
+            transitive += [dep[TerraformModuleInfo].modules]
+    direct_modules = depset(direct = ctx.attr.deps, transitive = embedded)
+    modules = depset(transitive = transitive + [direct_modules])
+    return direct_modules, modules
 
 def _generate_docs(ctx, srcs, md_output = None, json_output = None):
     files = ctx.actions.args()
     files.add_all([f for f in srcs if f.extension == "tf"])
+
+    #    files = [f for f in srcs if f.extension == "tf"]
+    #    if files
     ctx.actions.run_shell(
         inputs = srcs + [ctx.executable._terraform_docs],
         outputs = [md_output, json_output],
@@ -195,18 +216,21 @@ def _create_root_bundle(ctx, output, root_resolved_srcs, module_info):
 def module_impl(ctx, modulepath = None):
     """
     """
-    modulepath = modulepath or ctx.attr.modulepath or ctx.attr.name
+    modulepath = modulepath or ctx.attr.modulepath or "{pkg}_{name}".format(
+        pkg = ctx.label.package.replace("/", "_"),
+        name = ctx.attr.name,
+    )
 
     # collect & resolve sources
     srcs = _collect_srcs(ctx)
     module_resolved_srcs = ctx.actions.declare_file(ctx.attr.name + ".module-srcs.tar")
     root_resolved_srcs = ctx.actions.declare_file(ctx.attr.name + ".root-srcs.tar")
-    modules = _collect_deps(ctx)
+    direct_modules, modules = _collect_deps(ctx)
     _resolve_srcs(
         ctx,
         modulepath = modulepath,
         srcs = srcs,
-        modules = modules,
+        modules = direct_modules,
         module_resolved_srcs_output = module_resolved_srcs,
         root_resolved_srcs_output = root_resolved_srcs,
     )
@@ -233,6 +257,7 @@ def module_impl(ctx, modulepath = None):
         file_tars = file_tars,
         plugins = plugins,
         modules = modules,
+        direct_modules = direct_modules,
     )
 
     # create the "root module bundle" by providing our module_info

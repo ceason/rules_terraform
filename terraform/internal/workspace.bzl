@@ -44,6 +44,8 @@ _workspace_attrs = {
 def _workspace_impl(ctx):
     # get our module info
     module_info = module_impl(ctx, modulepath = ctx.attr.name).terraform_module_info
+    if not module_info.srcs:
+        fail("Must provide srcs", attr = "srcs")
 
     # create content publisher from aspect-instrumented targets
     content_publisher = ctx.actions.declare_file(ctx.attr.name + ".image-publisher")
@@ -94,7 +96,11 @@ def _workspace_impl(ctx):
     runfiles = runfiles.merge(ctx.runfiles(files = files))
     return [
         TerraformWorkspaceInfo(render_workspace = render_workspace),
-        DefaultInfo(runfiles = runfiles, executable = ctx.outputs.executable),
+        DefaultInfo(
+            files = depset(direct = [ctx.outputs.out]),
+            runfiles = runfiles,
+            executable = ctx.outputs.executable,
+        ),
     ]
 
 _terraform_workspace = rule(

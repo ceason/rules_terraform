@@ -32,13 +32,10 @@ def _terraform_k8s_manifest_impl(ctx):
     return [
         embedded_content_info,
         TerraformModuleInfo(
-            modulepath = None,
             srcs = [],
-            resolved_srcs = None,
             file_map = {},
             file_tars = depset(direct = [data_tar]),
             plugins = depset(direct = [ctx.attr._kubectl_plugin]),
-            modules = None,
         ),
         DefaultInfo(
             files = depset(direct = [data_tar]),

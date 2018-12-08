@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
     description='Description')
 
 parser.add_argument(
-    '--input', action='append', default=[], required=True,
+    '--input', action='append', default=[],
     help="Source terraform files to add to output bundle. Must have unique basenames.")
 
 parser.add_argument(
