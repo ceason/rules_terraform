@@ -31,11 +31,17 @@ module_outputs = {
     "out": "%{name}.tar.gz",
     "docs_md": "%{name}_docs.md",
     "docs_json": "%{name}_docs.json",
+    "graph": "%{name}_graph.dot",
 }
 
 module_tool_attrs = {
     "_terraform_docs": attr.label(
         default = Label("@tool_terraform_docs"),
+        executable = True,
+        cfg = "host",
+    ),
+    "_terraform": attr.label(
+        default = Label("@tool_terraform"),
         executable = True,
         cfg = "host",
     ),
@@ -139,6 +145,53 @@ json_out="$1"; shift
 "$terraform_docs" --sort-inputs-by-required json "$@" > "$json_out"
 """,
         tools = ctx.attr._terraform_docs.default_runfiles.files,
+    )
+
+def _generate_graph(ctx, root_bundle = None, plugins = None, output = None):
+    plugin_files = {}
+    for p in plugins.to_list():
+        plugin_files.update(p[TerraformPluginInfo].files)
+
+    # tgt_filename=>src_file pairs
+    plugin_file_args = ctx.actions.args()
+    for tgt, src in plugin_files.items():
+        plugin_file_args.add_all([tgt, src])
+
+    ctx.actions.run_shell(
+        inputs = plugin_files.values() + [
+            root_bundle,
+            ctx.executable._terraform,
+        ],
+        outputs = [output],
+        arguments = [
+            ctx.executable._terraform.path,
+            output.path,
+            root_bundle.path,
+            plugin_file_args,
+        ],
+        command = """set -eu
+tf="$PWD/$1"; shift
+output="$PWD/$1"; shift
+root_bundle="$PWD/$1"; shift
+export TF_PLUGIN_CACHE_DIR="${TF_PLUGIN_CACHE_DIR:=$TMPDIR/rules_terraform/plugin-cache}"
+mkdir -p "$TF_PLUGIN_CACHE_DIR"
+workspace_dir="$(mktemp -d)"
+trap "rm -rf $workspace_dir" EXIT
+tar xzf "$root_bundle" -C $workspace_dir
+while [[ $# -gt 0 ]]; do
+    tgt="$workspace_dir/.terraform/plugins/$1"; shift
+    src="$PWD/$1"; shift
+    mkdir -p $(dirname "$tgt")
+    ln -s "$src" "$tgt"
+done
+cd "$workspace_dir"
+"$tf" init > /dev/null
+"$tf" graph > "$output"
+""",
+        execution_requirements = {
+            "requires-network": "1",
+        },
+        tools = ctx.attr._terraform.default_runfiles.files,
     )
 
 def _resolve_srcs(
@@ -262,6 +315,14 @@ def module_impl(ctx, modulepath = None):
 
     # create the "root module bundle" by providing our module_info
     _create_root_bundle(ctx, ctx.outputs.out, root_resolved_srcs, module_info)
+
+    # create a 'dot' graph of our resources
+    _generate_graph(
+        ctx,
+        root_bundle = ctx.outputs.out,
+        plugins = plugins,
+        output = ctx.outputs.graph,
+    )
 
     # return our module_info on a struct so other things can use it
     return struct(
