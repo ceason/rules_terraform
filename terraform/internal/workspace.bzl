@@ -65,18 +65,12 @@ def _workspace_impl(ctx):
     renderer_args += ["--tfroot_archive", ctx.outputs.out]
     files += [ctx.outputs.out]
     transitive_plugins = []
-    if getattr(module_info, "plugins"):
-        transitive_plugins += [module_info.plugins]
-
-    for dep in module_info.modules.to_list():
-        if getattr(dep[TerraformModuleInfo], "plugins"):
-            transitive_plugins += [dep[TerraformModuleInfo].plugins]
-
-    for p in depset(transitive = transitive_plugins).to_list():
-        plugin = p[TerraformPluginInfo]
-        for filename, file in plugin.files.items():
-            renderer_args += ["--plugin_file", filename, file]
-            files += [file]
+    if hasattr(module_info, "plugins"):
+        for p in module_info.plugins.to_list():
+            plugin_info = p[TerraformPluginInfo]
+            for filename, file in plugin_info.files.items():
+                renderer_args += ["--plugin_file", filename, file]
+                files += [file]
 
     create_launcher(ctx, render_workspace, renderer_args)
     files += [render_workspace]

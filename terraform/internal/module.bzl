@@ -92,8 +92,8 @@ def _collect_data(ctx):
 
 def _collect_plugins(ctx):
     transitive = []
-    for dep in ctx.attr.embed:
-        if getattr(dep[TerraformModuleInfo], "plugins"):
+    for dep in ctx.attr.embed + ctx.attr.deps:
+        if hasattr(dep[TerraformModuleInfo], "plugins"):
             transitive += [dep[TerraformModuleInfo].plugins]
     return depset(direct = ctx.attr.plugins, transitive = transitive)
 
