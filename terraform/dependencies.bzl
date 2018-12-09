@@ -19,7 +19,7 @@ _EXTERNAL_BINARIES = {
     "terraform": dict(
         url = "https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{platform}_amd64.zip",
         path = "terraform",
-        version = "0.11.7",
+        version = "0.11.10",
     ),
     "yq": dict(
         url = "https://github.com/mikefarah/yq/releases/download/{version}/yq_{platform}_amd64",

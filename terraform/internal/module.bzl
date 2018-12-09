@@ -170,6 +170,13 @@ def _generate_graph(ctx, root_bundle = None, plugins = None, output = None):
             plugin_file_args,
         ],
         command = """set -eu
+: ${USER:=$(whoami)}
+if [ -e "/Users/$USER" ]; then
+    : ${HOME:="/Users/$USER"}
+else
+    : ${HOME:="/home/$USER"}
+fi
+export USER HOME
 tf="$PWD/$1"; shift
 output="$PWD/$1"; shift
 root_bundle="$PWD/$1"; shift
