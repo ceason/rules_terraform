@@ -5,7 +5,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 _EXTERNAL_BINARIES = {
     "terraform-provider-kubectl": dict(
         url = "https://github.com/ceason/terraform-provider-kubectl/releases/download/v{version}/terraform-provider-kubectl-{platform}-amd64",
-        version = "0.3.1",
+        version = "0.3.2",
     ),
     "kubectl": dict(
         path = "kubernetes/client/bin/kubectl",
