@@ -5,7 +5,7 @@
 ```python
 git_repository(
     name = "rules_terraform",
-    commit = "aa6d6bb34be78cb6ad769eb34b03a1cdd885d485",
+    commit = "a95e19df88394bac87ac53347122dcd366c3cbe5", # 2018-12-15 12:18:15 -0500
     remote = "https://github.com/ceason/rules_terraform.git",
 )
 
@@ -16,16 +16,17 @@ terraform_repositories()
 
 ### Usage Examples
 - [`//examples`](examples/)
-- [`//experimental/examples/cas/BUILD`](experimental/cas/examples/BUILD)
+- [`//examples/publishing/BUILD`](examples/publishing/BUILD) (experimental)
 
 # Rules
-
-
 
 - [terraform_module](#terraform_module)
 - [terraform_workspace](#terraform_workspace)
 - [terraform_integration_test](#terraform_integration_test)
 - [terraform_provider](#terraform_provider)
+
+### Experimental
+
 - [terraform_k8s_manifest](#terraform_k8s_manifest)
 - [embedded_reference](#embedded_reference)
 - [file_uploader](#file_uploader)

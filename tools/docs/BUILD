@@ -33,19 +33,6 @@ bzl_library(
     ],
 )
 
-genrule(
-    name = "links",
-    outs = ["links.md"],
-    cmd = """cat <<'EOF' > '$@'
-%s
-
-EOF
-""" % "\n".join([
-        "- [{rule}](#{rule})".format(rule = rule)
-        for rule in DOC_SYMBOL_MAP.keys()
-    ]),
-)
-
 [stardoc(
     name = symbol,
     out = symbol + ".md",
@@ -58,16 +45,19 @@ genrule(
     name = "docs",
     srcs = [
         "preamble.md",
-        ":links",
     ] + DOC_SYMBOL_MAP.keys(),
     outs = ["docs.sh"],
     cmd = """cat <<'EOF' > $@
 #!/usr/bin/env bash
 set -euo pipefail
-cat $(SRCS) > $$BUILD_WORKSPACE_DIRECTORY/README.md
+tmpfile=$$(mktemp)
+trap "rm -rf '$$tmpfile'" EXIT
+cat $(SRCS) > "$$tmpfile"
 cd $$BUILD_WORKSPACE_DIRECTORY
+sed "s,{CURRENT_COMMIT},$$(git rev-parse HEAD),g;
+     s,{CURRENT_COMMIT_DATE},$$(git show -s --format=%ci HEAD),g
+" "$$tmpfile" > README.md
 git add README.md
-
 EOF
 """,
     executable = True,
