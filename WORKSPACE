@@ -12,6 +12,10 @@ load("//terraform:dependencies.bzl", "terraform_repositories")
 
 terraform_repositories()
 
+#
+# Test repositories
+#
+
 load("@io_bazel_rules_docker//container:container.bzl", "repositories")
 
 repositories()
@@ -42,3 +46,26 @@ _py_image_repos()
 #load("@io_bazel_skydoc//skylark:skylark.bzl", "skydoc_repositories")
 #
 #skydoc_repositories()
+
+#
+# Docs repositories
+#
+
+git_repository(
+    name = "io_bazel_skydoc",
+    commit = "82fdbfe797c6591d8732df0c0389a2b1c3e50992",
+    remote = "https://github.com/bazelbuild/skydoc.git",
+)
+
+load("@io_bazel_skydoc//:setup.bzl", "skydoc_repositories")
+
+skydoc_repositories()
+
+load("@io_bazel_rules_sass//:package.bzl", "rules_sass_dependencies")
+rules_sass_dependencies()
+
+load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories")
+node_repositories()
+
+load("@io_bazel_rules_sass//:defs.bzl", "sass_repositories")
+sass_repositories()
