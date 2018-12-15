@@ -7,9 +7,3 @@ FileUploaderInfo = provider(
         #"runfiles":"<Runfiles> necessary for executable.",
     }
 )
-
-EmbeddedContentInfo = provider(
-    fields = {
-        "content_publishers":"<Depset> of executable <Target>s that will publish content when run.",
-    }
-)
