@@ -157,8 +157,16 @@ class GhHelper:
         self._hub = hub
         self._git = git
 
-        remote = git("remote")
-        self._remote_url = git('remote get-url ' + remote)
+        upstream = git([
+            'rev-parse',
+            '--abbrev-ref',
+            '--symbolic-full-name',
+            '@{u}']).split("/", 1)
+
+        self._remote = upstream[0]
+        self._tracked_branch = upstream[1]
+
+        self._remote_url = git('remote get-url ' + self._remote)
         self._commit = git('rev-parse --verify HEAD')
         self._repo_url = hub('browse -u')
         # keep only parts of the URL we care about
@@ -203,15 +211,10 @@ class GhHelper:
         :param publish:
         :return:
         """
-        head_ref = self._git('symbolic-ref -q HEAD')
-        tracked_branch = self._git([
-            'for-each-ref',
-            '--format=%(upstream:lstrip=3)',
-            head_ref])
         print("check_local_tracks_authoritative_branch", end=" ...")
-        if tracked_branch != self._branch:
+        if self._tracked_branch != self._branch:
             print("FAILED")
-            msg = "Local branch does not track authoritative branch '%s'" % self._branch
+            msg = "Local branch '%s' does not track authoritative branch '%s'" % (self._tracked_branch, self._branch)
             if publish:
                 print("FATAL: %s" % msg, file=sys.stderr)
                 exit(1)
