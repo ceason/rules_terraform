@@ -4,15 +4,14 @@ load("//experimental/internal/embedding:embedder.bzl", "create_embedded_file")
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
 
 def _terraform_k8s_manifest_impl(ctx):
-
     # embed image references
     resolved_manifest = ctx.actions.declare_file(ctx.attr.name + ".resolved-manifest.yaml")
-    embedded_content_info = create_embedded_file(
+    embedded = create_embedded_file(
         ctx,
         srcs = ctx.files.srcs,
         deps = ctx.attr.deps,
         output = resolved_manifest,
-        output_delimiter = "\n---\n"
+        output_delimiter = "\n---\n",
     )
 
     # write objects to individual files & bundle in a tar
@@ -30,7 +29,6 @@ def _terraform_k8s_manifest_impl(ctx):
     )
 
     return [
-        embedded_content_info,
         TerraformModuleInfo(
             srcs = [],
             file_map = {},
@@ -39,6 +37,10 @@ def _terraform_k8s_manifest_impl(ctx):
         ),
         DefaultInfo(
             files = depset(direct = [data_tar]),
+        ),
+        OutputGroupInfo(
+            content_publisher_executables = embedded.content_publisher_executables,
+            content_publisher_runfiles = embedded.content_publisher_runfiles,
         ),
     ]
 

@@ -97,15 +97,15 @@ def _workspace_impl(ctx):
         ),
     ]
 
-_terraform_workspace = rule(
+terraform_workspace = rule(
     _workspace_impl,
     executable = True,
     attrs = module_tool_attrs + content_publisher_attrs + _workspace_attrs,
     outputs = module_outputs,
 )
 
-def terraform_workspace(name, **kwargs):
-    _terraform_workspace(
+def terraform_workspace_macro(name, **kwargs):
+    terraform_workspace(
         name = name,
         **kwargs
     )

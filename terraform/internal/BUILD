@@ -4,6 +4,12 @@ exports_files(glob([
     "*.bzl",
 ]))
 
+filegroup(
+    name = "bzl",
+    srcs = glob(["*.bzl"]),
+    visibility = ["//tools/docs:__pkg__"],
+)
+
 py_binary(
     name = "render_workspace",
     srcs = ["render_workspace.py"],

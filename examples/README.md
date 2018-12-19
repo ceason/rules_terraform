@@ -19,13 +19,14 @@ py_image(
 #   the image is published
 # - The actual image_chroot is determined at build time based on what
 #   we've defined in '.bazelrc' (more on this later)
-terraform_k8s_manifest(
-    name = "k8s-deployment",
-    srcs = ["server.yaml"],
-    image_chroot = "$(IMAGE_CHROOT)",
-    images = {
-        "hello-world-server:dev": ":py_image",
-    },
+terraform_module(
+    name = "hello-world_k8s",
+    srcs = [
+        "k8s.tf",
+        "main.tf",
+    ],
+    embed = [":k8s-deployment"],
+    visibility = ["//visibility:public"],
 )
 
 # We combine our terraform files with the Kubernetes Deployment

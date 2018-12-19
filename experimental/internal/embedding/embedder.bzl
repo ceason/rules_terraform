@@ -1,5 +1,5 @@
 load("@io_bazel_rules_docker//container:providers.bzl", "PushInfo")
-load("//experimental/internal:providers.bzl", "EmbeddedContentInfo", "FileUploaderInfo")
+load("//experimental/internal:providers.bzl", "FileUploaderInfo")
 
 def get_valid_labels(ctx, embed_label):
     """
@@ -30,8 +30,8 @@ def get_valid_labels(ctx, embed_label):
     return valid
 
 def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_delimiter = ""):
-    content_publishers = []
-    container_pushes = []
+    content_publisher_executables = []
+    content_publisher_runfiles = []
     inputs = []
 
     args = ctx.actions.args()
@@ -44,7 +44,8 @@ def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_deli
     for dep in deps:
         valid_labels = get_valid_labels(ctx, dep.label)
         if FileUploaderInfo in dep:
-            content_publishers += [dep]
+            content_publisher_executables += [dep.files_to_run.executable]
+            content_publisher_runfiles += [dep.default_runfiles.files]
 
             # TODO: make sure target is executable & fail early if it's not
             info = dep[FileUploaderInfo]
@@ -55,9 +56,9 @@ def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_deli
                 url_file = info.url.path,
             ).to_json())
 
-        # TODO: move this to "container_push wrapper"
         if PushInfo in dep:
-            container_pushes += [dep]
+            content_publisher_executables += [dep.files_to_run.executable]
+            content_publisher_runfiles += [dep.default_runfiles.files]
             p = dep[PushInfo]
             inputs += [p.digest]
             args.add("--container_push", struct(
@@ -83,22 +84,24 @@ def create_embedded_file(ctx, srcs = [], output = None, deps = None, output_deli
         executable = ctx.executable._embedder,
         tools = ctx.attr._embedder.default_runfiles.files,
     )
-    return EmbeddedContentInfo(
-        content_publishers = depset(
-            direct = content_publishers + container_pushes,
-        ),
+    return struct(
+        content_publisher_executables = depset(direct = content_publisher_executables),
+        content_publisher_runfiles = depset(transitive = content_publisher_runfiles),
     )
 
 def _impl(ctx):
     """
     """
-    embedded_content_info = create_embedded_file(
+    embedded = create_embedded_file(
         ctx,
         srcs = [ctx.file.src],
         deps = ctx.attr.deps,
         output = ctx.outputs.out,
     )
-    return [embedded_content_info]
+    return [OutputGroupInfo(
+        content_publisher_executables = embedded.content_publisher_executables,
+        content_publisher_runfiles = embedded.content_publisher_runfiles,
+    )]
 
 embedded_reference = rule(
     _impl,
