@@ -5,7 +5,7 @@
 ```python
 git_repository(
     name = "rules_terraform",
-    commit = "a95e19df88394bac87ac53347122dcd366c3cbe5", # 2018-12-15 12:18:15 -0500
+    commit = "27c68a2b75947967a983afa9afe09db79d190bfc", # 2018-12-19 13:07:38 -0500
     remote = "https://github.com/ceason/rules_terraform.git",
 )
 
