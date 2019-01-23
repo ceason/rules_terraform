@@ -18,6 +18,10 @@ parser.add_argument(
     help='Target directory for the output. This will be used as the terraform root.')
 
 parser.add_argument(
+    '--terraform_binary', action='store', required=True,
+    help='Location of the bundled terraform binary.')
+
+parser.add_argument(
     '--plugin_file', action='append', metavar=('tgt_path', 'src'), nargs=2, default=[],
     help="'src' file will be copied to 'tgt_path', relative to 'plugin_dir'")
 
@@ -55,13 +59,15 @@ else
   command="-help"
 fi
 
+terraform=${TERRAFORM_BINARY-%{terraform_binary}}
+
 case "$command" in
 # these commands don't take 'tfroot' as an arg
 workspace|import|output|taint|untaint|state|debug|-help|version)
-  exec terraform "$command" "$@"
+  exec "$terraform" "$command" "$@"
   ;;
 *) # all other commands take tfroot as an arg
-  exec terraform "$command" "$@" "$tfroot"
+  exec "$terraform" "$command" "$@" "$tfroot"
   ;;
 esac
 """
@@ -133,10 +139,13 @@ def main(args):
         tgt_abs = args.output_dir + "/.terraform/plugins/" + tgt
         put_file(tgt_abs, src, overwrite=True)
 
+    # locate the tf binary
+    tf_binary = os.path.realpath(args.terraform_binary)
+
     # write the launcher
     launcher_file = args.output_dir + "/.terraform/terraform.sh"
     launcher = open(launcher_file, "w")
-    launcher.write(_LAUNCHER_TEMPLATE)
+    launcher.write(_LAUNCHER_TEMPLATE.replace("%{terraform_binary}", tf_binary))
     launcher.close()
     os.chmod(launcher_file, 0o755)
     print(launcher_file, file=sys.stdout)

@@ -64,6 +64,8 @@ def _workspace_impl(ctx):
     renderer_args += ["--prerender_hook", content_publisher]
     renderer_args += ["--tfroot_archive", ctx.outputs.out]
     files += [ctx.outputs.out]
+    renderer_args += ["--terraform_binary", ctx.executable._terraform]
+    files += [ctx.executable._terraform]
     transitive_plugins = []
     if hasattr(module_info, "plugins"):
         for p in module_info.plugins.to_list():

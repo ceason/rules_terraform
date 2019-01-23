@@ -8,10 +8,11 @@ def _integration_test_impl(ctx):
     runfiles = []
     transitive_runfiles = []
 
-    transitive_runfiles.append(ctx.attr._runner_template.data_runfiles.files)
-    transitive_runfiles.append(ctx.attr._stern.data_runfiles.files)
-    transitive_runfiles.append(ctx.attr.srctest.data_runfiles.files)
-    transitive_runfiles.append(ctx.attr.terraform_workspace.data_runfiles.files)
+    transitive_runfiles.append(ctx.attr._runner_template.default_runfiles.files)
+    transitive_runfiles.append(ctx.attr._stern.default_runfiles.files)
+    transitive_runfiles.append(ctx.attr._kubectl.default_runfiles.files)
+    transitive_runfiles.append(ctx.attr.srctest.default_runfiles.files)
+    transitive_runfiles.append(ctx.attr.terraform_workspace.default_runfiles.files)
     render_workspace = ctx.attr.terraform_workspace[TerraformWorkspaceInfo].render_workspace
 
     ctx.actions.expand_template(
@@ -20,6 +21,7 @@ def _integration_test_impl(ctx):
             "%{render_workspace}": render_workspace.short_path,
             "%{srctest}": ctx.executable.srctest.short_path,
             "%{stern}": ctx.executable._stern.short_path,
+            "%{kubectl}": ctx.executable._kubectl.short_path,
         },
         output = ctx.outputs.executable,
         is_executable = True,
@@ -60,6 +62,11 @@ terraform_integration_test = rule(
             executable = True,
             cfg = "host",
             default = "@tool_stern",
+        ),
+        "_kubectl": attr.label(
+            executable = True,
+            cfg = "host",
+            default = "@tool_kubectl",
         ),
     },
 )

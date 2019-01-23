@@ -28,6 +28,7 @@ trap cleanup EXIT
 
 render_workspace="%{render_workspace}"
 stern="$PWD/%{stern}"
+kubectl="$PWD/%{kubectl}"
 SRCTEST="%{srctest}"
 
 # render the tf
@@ -39,14 +40,14 @@ timeout 20 "$terraform" validate
 
 # if the kubectl provider is used then create a namespace for the test
 if [ "$(find .rules_terraform/.terraform/plugins/ -type f \( -name 'terraform-provider-kubernetes_*' -o -name 'terraform-provider-kubectl_*' \)|wc -l)" -gt 0 ]; then
-	kubectl config view --merge --raw --flatten > "$TEST_TMPDIR/kubeconfig.yaml"
+	"$kubectl" config view --merge --raw --flatten > "$TEST_TMPDIR/kubeconfig.yaml"
 	ITS_A_TRAP+=("rm -rf '$TEST_TMPDIR/kubeconfig.yaml'")
-	kube_context=$(kubectl config current-context)
+	kube_context=$("$kubectl" config current-context)
 	export KUBECONFIG="$TEST_TMPDIR/kubeconfig.yaml"
 	test_namespace=$(mktemp --dry-run test-XXXXXXXXX|tr '[:upper:]' '[:lower:]')
-	kubectl create namespace "$test_namespace"
-	ITS_A_TRAP+=("kubectl delete namespace $test_namespace --wait=false")
-	kubectl config set-context $kube_context --namespace=$test_namespace
+	"$kubectl" create namespace "$test_namespace"
+	ITS_A_TRAP+=("$kubectl delete namespace $test_namespace --wait=false")
+	"$kubectl" config set-context $kube_context --namespace=$test_namespace
 	# tail stuff with stern in the background
 	"$stern" '.*' --tail 1 --color always &
 fi

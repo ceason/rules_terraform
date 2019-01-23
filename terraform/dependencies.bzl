@@ -10,16 +10,16 @@ _EXTERNAL_BINARIES = {
     "kubectl": dict(
         path = "kubernetes/client/bin/kubectl",
         url = "https://dl.k8s.io/v{version}/kubernetes-client-{platform}-amd64.tar.gz",
-        version = "1.11.1",
+        version = "1.13.2",
     ),
     "terraform-docs": dict(
         url = "https://github.com/segmentio/terraform-docs/releases/download/{version}/terraform-docs-{version}-{platform}-amd64",
-        version = "v0.5.0",
+        version = "v0.6.0",
     ),
     "terraform": dict(
         url = "https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{platform}_amd64.zip",
         path = "terraform",
-        version = "0.11.10",
+        version = "0.11.11",
     ),
     "yq": dict(
         url = "https://github.com/mikefarah/yq/releases/download/{version}/yq_{platform}_amd64",
@@ -27,7 +27,7 @@ _EXTERNAL_BINARIES = {
     ),
     "stern": dict(
         url = "https://github.com/wercker/stern/releases/download/{version}/stern_{platform}_amd64",
-        version = "1.8.0",
+        version = "1.10.0",
     ),
     "hub": dict(
         url = "https://github.com/github/hub/releases/download/v{version}/hub-{platform}-amd64-{version}.tgz",
