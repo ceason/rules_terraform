@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import atexit
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ from os import path
 
 import sys
 
-from lib import BazelFlagsEnvVar, GhHelper, SubprocessHelper
+from lib import BazelFlagsEnvVar, GhHelper, SubprocessHelper, AssetPublisher
 
 
 def str2bool(v):
@@ -20,8 +21,12 @@ def str2bool(v):
     return True
   elif v.lower() in ('no', 'false', 'f', 'n', '0'):
     return False
-  else:
-    raise argparse.ArgumentTypeError('Boolean value expected.')
+  raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def jsonfile_flag(pathstr):
+  json2namedtuple = lambda d: namedtuple('X', d.keys())(*d.values())
+  return json.load(open(pathstr, "r"), object_hook=json2namedtuple)
 
 
 parser = argparse.ArgumentParser(
@@ -29,10 +34,7 @@ parser = argparse.ArgumentParser(
     description="Runs pre-flight checks before publishing a new GitHub Release.")
 
 parser.add_argument(
-    '--config', action='store', required=True,
-    type=lambda v: json.load(open(v, "r"),
-                             object_hook=lambda d: namedtuple('X', d.keys())(
-                                 *d.values())),
+    '--config', type=jsonfile_flag, action='store', required=True,
     help=argparse.SUPPRESS)
 
 parser.add_argument(
@@ -40,12 +42,10 @@ parser.add_argument(
     help="")
 
 parser.add_argument(
-    '--prerelease', type=str2bool, nargs='?', const=True, default=False,
-    help="")
-
-parser.add_argument(
-    '--prerelease_identifier', action='store', default="pre",
-    help="Eg. alpha,beta,rc,pre")
+    '--prerelease', default=None,
+    type=lambda v: str(v) if v != "" else None,
+    help="An optional prerelease identifier (eg. alpha,beta,rc,pre) or empty "
+         "string to indicate this is not a prerelease.")
 
 parser.add_argument(
     '--publish', dest='publish', action='store_true',
@@ -56,7 +56,8 @@ _bazel = SubprocessHelper('bazel', cwd=os.environ['BUILD_WORKSPACE_DIRECTORY'])
 
 
 def run_test_suites(test_configs):
-  # TODO(ceason): run_test_suites() should return a list of all source+build files relevant to the executed tests
+  # TODO(ceason): run_test_suites() should return a list of all source+build
+  #  files relevant to the executed tests
   srcs = set()
   for t in test_configs:
     descriptor, script = tempfile.mkstemp()
@@ -71,7 +72,8 @@ def run_test_suites(test_configs):
 
 
 def build_assets(asset_configs, assets_dir, tag, publish):
-  # TODO(ceason): build_assets() should return two lists of files (source,build) relevant to the built assets
+  # TODO(ceason): build_assets() should return two lists of files (source,build)
+  #  relevant to the built assets
   srcs = set()
   build_srcs = set()
 
@@ -103,6 +105,10 @@ def build_assets(asset_configs, assets_dir, tag, publish):
 def main(args):
   """
   """
+  if args.draft and args.config.asset_upload_prefix:
+    raise ValueError("Can't publish as draft (--draft=true) when "
+                     "asset_upload_prefix is specified.")
+
   workspace_dir = os.environ['BUILD_WORKSPACE_DIRECTORY']
 
   # create temp dirs
@@ -115,8 +121,7 @@ def main(args):
   for f in args.config.docs:
     tgt_path = path.join(docs_dir, path.basename(f))
     if path.exists(tgt_path):
-      print("Error, docs file already exists: '%s'" % path.basename(f))
-      exit(1)
+      raise ValueError("docs file already exists: '%s'" % path.basename(f))
     shutil.copyfile(f, tgt_path)
 
   # run tests
@@ -130,18 +135,21 @@ def main(args):
   git.check_local_tracks_authoritative_branch(args.publish)
 
   # build the assets
-  tag = git.get_next_semver(
-      args.prerelease_identifier if args.prerelease else None)
+  tag = git.get_next_semver(args.prerelease)
   asset_srcs, build_srcs = build_assets(args.config.asset_configs, assets_dir,
                                         tag, args.publish)
   git.check_srcs_match_head(asset_srcs | test_srcs | build_srcs, args.publish)
+
+  asset_publisher = AssetPublisher(args.config.asset_upload_prefix,
+                                   git.gh_organization, git.gh_repository, tag)
 
   # publish assets & tag as a new GH release
   if args.publish:
     print("Publishing release to %s" % git._repo_url, file=sys.stderr)
     git.check_head_exists_in_remote()
-    docs_links = git.publish_docs(docs_dir)  # ie push them to docs_branch
-    release_notes = git.generate_releasenotes(docs_links, asset_srcs)
+    docs_urls = git.publish_docs(docs_dir)  # ie push them to docs_branch
+    asset_urls = asset_publisher.publish_assets(assets_dir)
+    release_notes = git.generate_releasenotes(docs_urls, asset_urls, asset_srcs)
     git.publish_release(assets_dir, release_notes, tag, args.draft)
   else:
     print("Finished running preflight checks. Run with '--publish' flag "
@@ -149,4 +157,10 @@ def main(args):
 
 
 if __name__ == '__main__':
-  main(parser.parse_args())
+  logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+  try:
+    main(parser.parse_args())
+    exit(0)
+  except ValueError as e:
+    logging.fatal(e.message)
+  exit(1)

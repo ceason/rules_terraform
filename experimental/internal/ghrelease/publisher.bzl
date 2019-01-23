@@ -66,6 +66,7 @@ def _impl(ctx):
         branch = ctx.attr.branch,
         version = _parse_version(ctx.attr.version),
         hub = ctx.executable._tool_hub.short_path,
+        asset_upload_prefix = ctx.expand_make_variables("asset_upload_prefix", ctx.attr.asset_upload_prefix, {}),
     )
     ctx.actions.write(config_file, config.to_json())
     ctx.actions.write(
@@ -108,6 +109,11 @@ ghrelease_publisher = rule(
             doc = "UNIMPLEMENTED. Expose the SEMVER via this environment variable (eg for use in stamping via --workspace_status_command).",
         ),
         "branch": attr.string(default = "master"),
+        "asset_upload_prefix": attr.string(
+            mandatory = False,
+            default = "",
+            doc = "Upload assets to the specified bucket (eg. s3://s3-bucket-name/optional/key/prefix). Supports make variable expansion. Incompatible with --draft=true.",
+        ),
         "docs_branch": attr.string(default = "docs"),
         "docs": attr.label_list(default = [], allow_files = True),
         "_publisher_runner": attr.label(

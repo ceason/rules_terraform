@@ -21,6 +21,7 @@ py_library(
     ],
     deps = [
         "@py_semver",
+        "@py_boto3",
     ],
 )
 

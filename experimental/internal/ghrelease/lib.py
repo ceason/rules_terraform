@@ -11,6 +11,14 @@ from os import path
 from subprocess import CalledProcessError
 from tempfile import mkdtemp
 
+import boto3
+from boto3.s3.transfer import S3Transfer
+
+try:
+  from urlparse import urlparse
+except ImportError:
+  from urllib.parse import urlparse
+
 import semver
 import sys
 from semver import VersionInfo
@@ -141,6 +149,70 @@ class ReleaseInfo(VersionInfo):
     self.commit = commit
 
 
+class AssetPublisher:
+  def __init__(self, prefix, org, repository, tag):
+    # TODO: instantiate appropriate handler (eg s3, etc) based on specified
+    #  upload prefix
+    if prefix == "":
+      self._bucket = None
+    elif prefix.startswith("s3://"):
+      o = urlparse(prefix)
+      self._bucket = o.hostname
+      self._key_prefix = "{path}/{org}/{repository}/{tag}".format(
+          path=o.path,
+          org=org,
+          repository=repository,
+          tag=tag,
+      ).lstrip("/")
+    else:
+      raise ValueError("invalid s3 prefix '{got}' (wanted '{wanted}')".format(
+          got=prefix,
+          wanted="s3://<bucket_name>/<key>/<path>",
+      ))
+
+  def publish_assets(self, assets_dir):
+    """
+
+    :param assets_dir:
+    :return: List of published asset links
+    """
+    # short circuit/no-op if no bucket is configured
+    if self._bucket is None:
+      return []
+
+    def sizeof_fmt(num, use_kibibyte=True):
+      base, suffix = [(1000., 'B'), (1024., 'iB')][use_kibibyte]
+      for x in ['B'] + map(lambda x: x + suffix, list('kMGTP')):
+        if -base < num < base:
+          return "%3.1f%s" % (num, x)
+        num /= base
+      return "%3.1f%s" % (num, x)
+
+    # iterate files, uploading to s3
+    asset_urls = []
+
+    s3 = boto3.client('s3')
+    with S3Transfer(s3) as transfer:
+      for root, _, files in os.walk(assets_dir):
+        for f in files:
+          file_path = path.realpath(path.join(root, f))
+          file_size = path.getsize(file_path)
+          key = self._key_prefix + "/" + f
+          url = "https://{bucket}.s3.amazonaws.com/{key}".format(
+              bucket=self._bucket,
+              key=key)
+          logging.info("Uploading {size} file ({url})".format(
+              size=sizeof_fmt(file_size),
+              url=url))
+          transfer.upload_file(file_path, self._bucket, key)
+          asset_urls += [url]
+
+    if len(asset_urls) > 0:
+      logging.info("Upload completed successfully")
+
+    return asset_urls
+
+
 class GhHelper:
 
   def __init__(self, repo_dir, branch, docs_branch, version_major,
@@ -172,6 +244,8 @@ class GhHelper:
     self._repo_url = hub('browse -u')
     # keep only parts of the URL we care about
     self._repo_url = "/".join(self._repo_url.split("/")[0:5])
+    self.gh_organization = self._repo_url.split("/")[-2]
+    self.gh_repository = self._repo_url.split("/")[-1]
 
     tags = {}
     self._heads = set()
@@ -216,7 +290,7 @@ class GhHelper:
     if self._tracked_branch != self._branch:
       print("FAILED")
       msg = "Local branch '%s' does not track authoritative branch '%s'" % (
-      self._tracked_branch, self._branch)
+        self._tracked_branch, self._branch)
       if publish:
         print("FATAL: %s" % msg, file=sys.stderr)
         exit(1)
@@ -309,10 +383,12 @@ class GhHelper:
         return r
     return None
 
-  def generate_releasenotes(self, docs_links=None, asset_srcs=None):
-    # type: (list, set) -> str
+  def generate_releasenotes(self, docs_links=None, assets=None,
+      asset_srcs=None):
+    # type: (list, list, set) -> str
     """
     :param docs_links: List of links to docs associated with this release
+    :param assets: List of asset URLs
     :param asset_srcs: (Unimplemented) Set of files. The changelog will
     be filtered to include only commits which involve these files.
     :return:
@@ -324,6 +400,12 @@ class GhHelper:
     previous = self.get_previous_release()
 
     output_parts = []
+    if assets:
+      output_parts.append("### Asset URLs\n%s" % "\n".join([
+        "- [{url}]({url})".format(url=l)
+        for l in assets
+      ]))
+
     if docs_links:
       docs_links_md = [
         "- [{filename}]({url})".format(
