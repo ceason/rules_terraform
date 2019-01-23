@@ -20,18 +20,37 @@ DOC_SYMBOL_MAP = {
 bzl_library(
     name = "bzlfiles",
     srcs = [
-        "//experimental:bzl",
-        "//experimental/internal:bzl",
-        "//experimental/internal/embedding:bzl",
-        "//experimental/internal/ghrelease:bzl",
-        "//experimental/internal/k8s:bzl",
-        "//terraform:bzl",
-        "//terraform/internal:bzl",
+        "//experimental:container.bzl",
+        "//experimental/internal/embedding:cas_file.bzl",
+        "//experimental/internal/embedding:content_publisher.bzl",
+        "//experimental/internal/embedding:embedder.bzl",
+        "//experimental/internal/ghrelease:assets.bzl",
+        "//experimental/internal/ghrelease:publisher.bzl",
+        "//experimental/internal/ghrelease:test_suite.bzl",
+        "//experimental/internal/k8s:k8s_manifest.bzl",
+        "//experimental/internal:providers.bzl",
+        "//experimental:k8s.bzl",
+        "//experimental:publishing.bzl",
+        "//terraform:def.bzl",
+        "//terraform:dependencies.bzl",
+        "//terraform/internal:http_binary.bzl",
+        "//terraform/internal:integration_test.bzl",
+        "//terraform/internal:launcher.bzl",
+        "//terraform/internal:module.bzl",
+        "//terraform/internal:providers.bzl",
+        "//terraform/internal:terraform.bzl",
+        "//terraform/internal:terraform_lib.bzl",
+        "//terraform/internal:workspace.bzl",
         # grep -ro --include='*.bzl' '^load("@.*' *|cut -d'"' -f2|sort -u
         "@io_bazel_rules_docker//container:providers.bzl",
         "@bazel_tools//tools/build_defs/hash:hash.bzl",
     ],
 )
+
+[sh_binary(
+    name = f[:-len(".sh")],
+    srcs = [f],
+) for f in glob(["*.sh"])]
 
 [stardoc(
     name = symbol,
