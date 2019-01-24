@@ -5,7 +5,7 @@
 ```python
 git_repository(
     name = "rules_terraform",
-    commit = "27c68a2b75947967a983afa9afe09db79d190bfc", # 2018-12-19 13:07:38 -0500
+    commit = "c06d18c0117d0bfd348e89758ad7bad79184294f", # 2019-01-23 19:07:09 -0500
     remote = "https://github.com/ceason/rules_terraform.git",
 )
 
@@ -428,7 +428,7 @@ file_uploader(<a href="#file_uploader-name">name</a>, <a href="#file_uploader-sh
 ## ghrelease_publisher
 
 <pre>
-ghrelease_publisher(<a href="#ghrelease_publisher-name">name</a>, <a href="#ghrelease_publisher-branch">branch</a>, <a href="#ghrelease_publisher-deps">deps</a>, <a href="#ghrelease_publisher-docs">docs</a>, <a href="#ghrelease_publisher-docs_branch">docs_branch</a>, <a href="#ghrelease_publisher-semver_env_var">semver_env_var</a>, <a href="#ghrelease_publisher-version">version</a>)
+ghrelease_publisher(<a href="#ghrelease_publisher-name">name</a>, <a href="#ghrelease_publisher-asset_upload_prefix">asset_upload_prefix</a>, <a href="#ghrelease_publisher-branch">branch</a>, <a href="#ghrelease_publisher-deps">deps</a>, <a href="#ghrelease_publisher-docs">docs</a>, <a href="#ghrelease_publisher-docs_branch">docs_branch</a>, <a href="#ghrelease_publisher-semver_env_var">semver_env_var</a>, <a href="#ghrelease_publisher-version">version</a>)
 </pre>
 
 
@@ -447,6 +447,15 @@ ghrelease_publisher(<a href="#ghrelease_publisher-name">name</a>, <a href="#ghre
         <a href="https://bazel.build/docs/build-ref.html#name">Name</a>; required
         <p>
           A unique name for this target.
+        </p>
+      </td>
+    </tr>
+    <tr id="ghrelease_publisher-asset_upload_prefix">
+      <td><code>asset_upload_prefix</code></td>
+      <td>
+        String; optional
+        <p>
+          Upload assets to the specified bucket (eg. s3://s3-bucket-name/optional/key/prefix). Supports make variable expansion. Incompatible with --draft=true.
         </p>
       </td>
     </tr>
