@@ -71,8 +71,8 @@ genrule(
 set -euo pipefail
 tmpfile=$$(mktemp)
 trap "rm -rf '$$tmpfile'" EXIT
-cat $(SRCS) > "$$tmpfile"
 cd $$BUILD_WORKSPACE_DIRECTORY
+(cd $$(bazel info execution_root) && cat $(SRCS) > "$$tmpfile")
 sed "s,{CURRENT_COMMIT},$$(git rev-parse HEAD),g;
      s,{CURRENT_COMMIT_DATE},$$(git show -s --format=%ci HEAD),g
 " "$$tmpfile" > README.md
